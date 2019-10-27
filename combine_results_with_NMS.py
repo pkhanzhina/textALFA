@@ -49,8 +49,8 @@ if __name__ == '__main__':
     full_output_dir = os.path.join('./res_nms_ic15', result_name)
     if not os.path.exists(full_output_dir):
         os.mkdir(full_output_dir)
-    zip_filename = os.path.join(full_output_dir, result_name + '.zip')
-    zipObj = ZipFile(zip_filename, 'w')
+    # zip_filename = os.path.join(full_output_dir, result_name + '.zip')
+    # zipObj = ZipFile(zip_filename, 'w')
     for img_key in img_keys:
         new_img_confs, new_img_polygons = joined_subm_dict[img_key]
         output_filename = 'res_img_%s.txt' % img_key
@@ -59,10 +59,10 @@ if __name__ == '__main__':
             f.write('\n'.join([','.join(list(np.reshape(new_img_polygons[i][0], -1).astype('int32').astype('string')) \
                                         + [str(new_img_confs[i])])
              for i in range(len(new_img_confs))]))
-        zipObj.write(output_filename)
-    zipObj.close()
-    p = {
-        'g': gtFilePath,
-        's': zip_filename
-    }
-    main_evaluation(p, evalParams, validate_data, evaluate_method, show_result=True, per_sample=True)
+        # zipObj.write(output_filename)
+    # zipObj.close()
+    # p = {
+    #     'g': gtFilePath,
+    #     's': zip_filename
+    # }
+    # main_evaluation(p, evalParams, validate_data, evaluate_method, show_result=True, per_sample=True)
