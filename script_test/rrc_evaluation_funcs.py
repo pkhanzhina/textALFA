@@ -281,7 +281,7 @@ def get_tl_line_values_from_file_contents(content,CRLF=True,LTRB=True,withTransc
         
     return pointsList,confidencesList,transcriptionsList
 
-def main_evaluation(p,default_evaluation_params_fn,validate_data_fn,evaluate_method_fn,show_result=True,per_sample=True):
+def main_evaluation(p,evalParams,validate_data_fn,evaluate_method_fn,show_result=True,per_sample=True):
     """
     This process validates a method, evaluates it and if it succed generates a ZIP file with a JSON entry for each sample.
     Params:
@@ -296,14 +296,18 @@ def main_evaluation(p,default_evaluation_params_fn,validate_data_fn,evaluate_met
         if(len(sys.argv)<3):
             print_help()
 
-    evalParams = default_evaluation_params_fn()
     if 'p' in p.keys():
-        evalParams.update( p['p'] if isinstance(p['p'], dict) else json.loads(p['p'][1:-1]) )
+        evalParams.update( p['p'] if isinstance(p['p'], dict) else json.loads(p['p'][1:-1]))
 
     resDict={'calculated':True,'Message':'','method':'{}','per_sample':'{}'}    
     try:
-        validate_data_fn(p['g'], p['s'], evalParams)  
-        evalData = evaluate_method_fn(p['g'], p['s'], evalParams)
+        gtFilePath = p['g']
+        submFilePath = p['s']
+        validate_data_fn(gtFilePath, evalParams, isGT=True)
+        validate_data_fn(submFilePath, evalParams, isGT=False)
+        gt = load_zip_file(gtFilePath, evalParams['GT_SAMPLE_NAME_2_ID'])
+        subm = load_zip_file(submFilePath, evalParams['DET_SAMPLE_NAME_2_ID'], True)
+        evalData = evaluate_method_fn(gt, subm, evalParams)
         resDict.update(evalData)
         
     except Exception as e:
@@ -348,21 +352,25 @@ def main_evaluation(p,default_evaluation_params_fn,validate_data_fn,evaluate_met
     return resDict
 
 
-def main_validation(default_evaluation_params_fn,validate_data_fn):
+def main_validation(p, evalParams, validate_data_fn, evaluate_method):
     """
     This process validates a method
     Params:
-    default_evaluation_params_fn: points to a function that returns a dictionary with the default parameters used for the evaluation
-    validate_data_fn: points to a method that validates the corrct format of the submission
+    evaluation_params_fn: points to a function that returns a dictionary with the default parameters used for the evaluation
+    validate_data_fn: points to a method that validates the correct format of the submission
     """    
     try:
-        p = dict([s[1:].split('=') for s in sys.argv[1:]])
-        evalParams = default_evaluation_params_fn()
         if 'p' in p.keys():
             evalParams.update( p['p'] if isinstance(p['p'], dict) else json.loads(p['p'][1:-1]) )
 
-        validate_data_fn(p['g'], p['s'], evalParams)              
-        print ('SUCCESS')
+        gtFilePath = p['g']
+        submFilePath = p['p']
+        validate_data_fn(gtFilePath, evalParams, isGT=True)
+        validate_data_fn(submFilePath, evalParams, isGT=False)
+        gt = load_zip_file(gtFilePath, evalParams['GT_SAMPLE_NAME_2_ID'])
+        subm = load_zip_file(submFilePath, evalParams['DET_SAMPLE_NAME_2_ID'], True)
+        resDict = evaluate_method(gt, subm, evalParams)
+        print(resDict['method'])
         sys.exit(0)
     except Exception as e:
         print (str(e))

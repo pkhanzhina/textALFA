@@ -1,17 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from collections import namedtuple
-import rrc_evaluation_funcs
-import importlib
+import numpy as np
 
-def evaluation_imports():
-    """
-    evaluation_imports: Dictionary ( key = module name , value = alias  )  with python modules used in the evaluation. 
-    """    
-    return {
-            'Polygon':'plg',
-            'numpy':'np'
-            }
+import rrc_evaluation_funcs
+from IoU_computation import *
+
 
 def default_evaluation_params():
     """
@@ -24,123 +18,65 @@ def default_evaluation_params():
                 'DET_SAMPLE_NAME_2_ID':'res_img_([0-9]+).txt',
                 'LTRB':False, #LTRB:2points(left,top,right,bottom) or 4 points(x1,y1,x2,y2,x3,y3,x4,y4)
                 'CRLF':False, # Lines are delimited by Windows CRLF format
-                'CONFIDENCES':False, #Detections must include confidence value. AP will be calculated
+                'CONFIDENCES':True, #Detections must include confidence value. AP will be calculated
                 'PER_SAMPLE_RESULTS':True #Generate per sample results and produce data for visualization
             }
 
-def validate_data(gtFilePath, submFilePath,evaluationParams):
+def validate_data(filePath, evaluationParams, isGT):
     """
     Method validate_data: validates that all files in the results folder are correct (have the correct name contents).
                             Validates also that there are no missing files in the folder.
                             If some error detected, the method raises the error
     """
-    gt = rrc_evaluation_funcs.load_zip_file(gtFilePath,evaluationParams['GT_SAMPLE_NAME_2_ID'])
+    if isGT:
+        gt = rrc_evaluation_funcs.load_zip_file(filePath,evaluationParams['GT_SAMPLE_NAME_2_ID'])
+        # Validate format of GroundTruth
+        for k in gt:
+            rrc_evaluation_funcs.validate_lines_in_file(k, gt[k], evaluationParams['CRLF'], evaluationParams['LTRB'],
+                                                        True)
+    else:
+        subm = rrc_evaluation_funcs.load_zip_file(filePath,evaluationParams['DET_SAMPLE_NAME_2_ID'],True)
+        #Validate format of results
+        for k in subm:
+            # if (k in gt) == False :
+            #     raise Exception("The sample %s not present in GT" %k)
+            rrc_evaluation_funcs.validate_lines_in_file(k,subm[k],evaluationParams['CRLF'],evaluationParams['LTRB'],False,evaluationParams['CONFIDENCES'])
 
-    subm = rrc_evaluation_funcs.load_zip_file(submFilePath,evaluationParams['DET_SAMPLE_NAME_2_ID'],True)
+
+def compute_ap(confList, matchList, numGtCare):
+    correct = 0
+    AP = 0
+    if len(confList) > 0:
+        confList = np.array(confList)
+        matchList = np.array(matchList)
+        sorted_ind = np.argsort(-confList)
+        confList = confList[sorted_ind]
+        matchList = matchList[sorted_ind]
+        for n in range(len(confList)):
+            match = matchList[n]
+            if match:
+                correct += 1
+                AP += float(correct) / (n + 1)
+
+        if numGtCare > 0:
+            AP /= numGtCare
+
+    return AP
+
     
-    #Validate format of GroundTruth
-    for k in gt:
-        rrc_evaluation_funcs.validate_lines_in_file(k,gt[k],evaluationParams['CRLF'],evaluationParams['LTRB'],True)
-
-    #Validate format of results
-    for k in subm:
-        if (k in gt) == False :
-            raise Exception("The sample %s not present in GT" %k)
-        
-        rrc_evaluation_funcs.validate_lines_in_file(k,subm[k],evaluationParams['CRLF'],evaluationParams['LTRB'],False,evaluationParams['CONFIDENCES'])
-
-    
-def evaluate_method(gtFilePath, submFilePath, evaluationParams):
+def evaluate_method(gt, subm, evaluationParams):
     """
     Method evaluate_method: evaluate method and returns the results
         Results. Dictionary with the following values:
         - method (required)  Global method metrics. Ex: { 'Precision':0.8,'Recall':0.9 }
         - samples (optional) Per sample metrics. Ex: {'sample1' : { 'Precision':0.8,'Recall':0.9 } , 'sample2' : { 'Precision':0.8,'Recall':0.9 }
-    """    
-    
-    for module,alias in evaluation_imports().items():
-        globals()[alias] = importlib.import_module(module)    
-    
-    def polygon_from_points(points):
-        """
-        Returns a Polygon object to use with the Polygon2 class from a list of 8 points: x1,y1,x2,y2,x3,y3,x4,y4
-        """        
-        resBoxes=np.empty([1,8],dtype='int32')
-        resBoxes[0,0]=int(points[0])
-        resBoxes[0,4]=int(points[1])
-        resBoxes[0,1]=int(points[2])
-        resBoxes[0,5]=int(points[3])
-        resBoxes[0,2]=int(points[4])
-        resBoxes[0,6]=int(points[5])
-        resBoxes[0,3]=int(points[6])
-        resBoxes[0,7]=int(points[7])
-        pointMat = resBoxes[0].reshape([2,4]).T
-        return plg.Polygon( pointMat)
-    
-    def rectangle_to_polygon(rect):
-        resBoxes=np.empty([1,8],dtype='int32')
-        resBoxes[0,0]=int(rect.xmin)
-        resBoxes[0,4]=int(rect.ymax)
-        resBoxes[0,1]=int(rect.xmin)
-        resBoxes[0,5]=int(rect.ymin)
-        resBoxes[0,2]=int(rect.xmax)
-        resBoxes[0,6]=int(rect.ymin)
-        resBoxes[0,3]=int(rect.xmax)
-        resBoxes[0,7]=int(rect.ymax)
-
-        pointMat = resBoxes[0].reshape([2,4]).T
-        
-        return plg.Polygon( pointMat)
-    
-    def rectangle_to_points(rect):
-        points = [int(rect.xmin), int(rect.ymax), int(rect.xmax), int(rect.ymax), int(rect.xmax), int(rect.ymin), int(rect.xmin), int(rect.ymin)]
-        return points
-        
-    def get_union(pD,pG):
-        areaA = pD.area();
-        areaB = pG.area();
-        return areaA + areaB - get_intersection(pD, pG);
-        
-    def get_intersection_over_union(pD,pG):
-        try:
-            return get_intersection(pD, pG) / get_union(pD, pG);
-        except:
-            return 0
-        
-    def get_intersection(pD,pG):
-        pInt = pD & pG
-        if len(pInt) == 0:
-            return 0
-        return pInt.area()
-    
-    def compute_ap(confList, matchList,numGtCare):
-        correct = 0
-        AP = 0
-        if len(confList)>0:
-            confList = np.array(confList)
-            matchList = np.array(matchList)
-            sorted_ind = np.argsort(-confList)
-            confList = confList[sorted_ind]
-            matchList = matchList[sorted_ind]
-            for n in range(len(confList)):
-                match = matchList[n]
-                if match:
-                    correct += 1
-                    AP += float(correct)/(n + 1)
-
-            if numGtCare>0:
-                AP /= numGtCare
-            
-        return AP
+    """
     
     perSampleMetrics = {}
     
     matchedSum = 0
     
     Rectangle = namedtuple('Rectangle', 'xmin ymin xmax ymax')
-    
-    gt = rrc_evaluation_funcs.load_zip_file(gtFilePath,evaluationParams['GT_SAMPLE_NAME_2_ID'])
-    subm = rrc_evaluation_funcs.load_zip_file(submFilePath,evaluationParams['DET_SAMPLE_NAME_2_ID'],True)
    
     numGlobalCareGt = 0;
     numGlobalCareDet = 0;
@@ -311,5 +247,11 @@ def evaluate_method(gtFilePath, submFilePath, evaluationParams):
 
 
 if __name__=='__main__':
-        
-    rrc_evaluation_funcs.main_evaluation(None,default_evaluation_params,validate_data,evaluate_method)
+    p = {
+        'g': '../gt_ic15/gt_ic15.zip',
+        # 's': '../res_craft_ic15/res_craft_ic15_015.zip'
+        # 's': '../res_psenet_ic15/res_psenet_ic15_015.zip'
+        's': '../res_nms_ic15/res_nms_ic15_craft_015_psenet_015.zip'
+    }
+    evalParams = default_evaluation_params()
+    rrc_evaluation_funcs.main_evaluation(p, evalParams, validate_data, evaluate_method)
