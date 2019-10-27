@@ -1,7 +1,7 @@
 INSTRUCTIONS FOR THE STANDALONE SCRIPTS
 Requirements:
--         Python version 2.7.
--         Each Task requires different Python modules. When running the script, if some module is not installed you will see a notification and installation instructions.
+- Python version 2.7.
+- Each Task requires different Python modules. When running the script, if some module is not installed you will see a notification and installation instructions.
  
 Procedure:
 Download the ZIP file for the requested script and unzip it to a directory.
