@@ -249,9 +249,9 @@ def evaluate_method(gt, subm, evaluationParams):
 if __name__=='__main__':
     p = {
         'g': '../gt_ic15/gt_ic15.zip',
-        # 's': '../res_craft_ic15/res_craft_ic15_015.zip'
-        # 's': '../res_psenet_ic15/res_psenet_ic15_015.zip'
-        's': '../res_nms_ic15/res_nms_ic15_craft_015_psenet_015.zip'
+        # 's': '../res_craft_ic15/res_craft_ic15.zip'
+        's': '../res_psenet_ic15/res_psenet_ic15_015.zip'
+        # 's': '../res_nms_ic15/res_nms_ic15_craft_015_psenet_015.zip'
     }
     evalParams = default_evaluation_params()
     rrc_evaluation_funcs.main_evaluation(p, evalParams, validate_data, evaluate_method)
