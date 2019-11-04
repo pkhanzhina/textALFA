@@ -45,7 +45,7 @@ if __name__ == '__main__':
             gtPol = polygon_from_points(points)
             gtPols.append(gtPol)
             gtConfs.append(1.0)
-        img = visualize(img_key, gtConfs, gtPols, 'gt')
+        # img = visualize(img_key, gtConfs, gtPols, 'gt')
         joined_img_polygons = []
         joined_img_confs = []
         for detector_key in detector_keys:
@@ -59,9 +59,9 @@ if __name__ == '__main__':
                 detPols.append(detPol)
                 joined_img_polygons.append(detPol)
                 joined_img_confs.append(confidencesList[i])
-            visualize(img_key, confidencesList, detPols, detector_key, img)
+            # visualize(img_key, confidencesList, detPols, detector_key, img)
         new_img_confs, new_img_polygons = polygons_nms(joined_img_confs, joined_img_polygons)
-        visualize(img_key, new_img_confs, new_img_polygons, 'nms', img)
+        # visualize(img_key, new_img_confs, new_img_polygons, 'nms', img)
         joined_subm_dict[img_key] = (new_img_confs, new_img_polygons)
     full_output_dir = os.path.join('./res_nms_ic15', result_name)
     if not os.path.exists(full_output_dir):
