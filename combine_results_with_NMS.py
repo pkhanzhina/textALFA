@@ -5,7 +5,7 @@ from zipfile import ZipFile
 from eval_script_ic15.rrc_evaluation_funcs import load_zip_file, get_tl_line_values_from_file_contents, decode_utf8
 from eval_script_ic15.eval_script import default_evaluation_params, validate_data
 from polygon_operations import polygon_from_points
-from polygon_NMS import polygons_nms
+from polygon_NMS import polygons_NMS
 from visualize_detections import visualize
 
 do_visualization = False
@@ -72,7 +72,7 @@ if __name__ == '__main__':
                 joined_img_confs.append(confidencesList[i])
             if do_visualization:
                 visualize(img_key, confidencesList, detPols, [False] * len(detPols), detector_key, img)
-        new_img_confs, new_img_polygons = polygons_nms(joined_img_confs, joined_img_polygons)
+        new_img_confs, new_img_polygons = polygons_NMS(joined_img_confs, joined_img_polygons)
         if do_visualization:
             visualize(img_key, new_img_confs, new_img_polygons, [False] * len(new_img_confs), 'nms', img)
         joined_subm_dict[img_key] = (new_img_confs, new_img_polygons)
