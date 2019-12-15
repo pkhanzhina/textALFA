@@ -141,9 +141,9 @@ class ALFA:
         self.bc = bbox_clustering.BoxClustering()
 
 
-    def ALFA_result(self, all_detectors_names, detectors_bounding_boxes, detectors_class_scores, tau, gamma, bounding_box_fusion_method,
-                        class_scores_fusion_method, add_empty_detections, empty_epsilon, same_labels_only,
-                        confidence_style, use_BC, max_1_box_per_detector, single):
+    def ALFA_result(self, all_detectors_names, detectors_bounding_boxes, detectors_bounding_boxes_angles,
+                    detectors_class_scores, tau, gamma, bounding_box_fusion_method, class_scores_fusion_method,
+                    add_empty_detections, empty_epsilon, max_1_box_per_detector):
         """
         ALFA algorithm
 
@@ -156,25 +156,40 @@ class ALFA:
             Dictionary, where keys are detector's names and values are numpy arrays of detector's bounding boxes.
 
             Example: {
-            'ssd': [[10, 28, 128, 250],
+            'craft': [[10, 28, 128, 250],
                     ...
                     [55, 120, 506, 709]],
             ...
-            'denet': [[55, 169, 350, 790],
+            'charnet': [[55, 169, 350, 790],
                       ...
                       [20, 19, 890, 620]],
             }
+
+
+        detectors_bounding_boxes_angles : dict
+            Dictionary, where keys are detector's names and values are numpy arrays of detector's bounding boxes angles.
+
+            Example: {
+            'craft': [3.14,
+                    ...
+                    1.57],
+            ...
+            'charnet': [1.04,
+                      ...
+                      0.52],
+            }
+
 
         detectors_class_scores : dict
             Dictionary, where keys are detector's names and values are numpy arrays of detector's class scores vectors,
             corresponding to bounding boxes.
 
             Example: {
-            'ssd': [[0.8, 0.004, ..., 0.000009],
+            'craft': [[0.8, 0.004, ..., 0.000009],
                     ...
                     [0.0, 0.9, ..., 0.0001]],
             ...
-            'denet': [[0.4, 0.4, ..., 0.1],
+            'charnet': [[0.4, 0.4, ..., 0.1],
                       ...
                       [0.000001, 0.0000005, ..., 0.9]],
             }
@@ -199,26 +214,9 @@ class ALFA:
         empty_epsilon : float
             Parameter epsilon in the paper, between [0.0, 1.0]
 
-        same_labels_only : boolean
-            True - only detections with same class label will be added into same cluster
-            False - detections labels won't be taken into account while clustering
-
-        confidence_style : str
-            How to compute score for object proposal ["LABEL", "ONE MINUS NO OBJECT"]
-            We used "LABEL" in every experiment
-
-        use_BC : boolean
-            True - Bhattacharyya and Jaccard coefficient will be used to compute detections similarity score
-            False - only Jaccard coefficient will be used to compute detections similarity score
-
         max_1_box_per_detector : boolean
             True - only one detection form detector could be added to cluster
             False - multiple detections from same detector could be added to cluster
-
-        single : boolean
-            True - computes ALFA prediction for mAP-s computation refered in paper
-            False - computes ALFA prediction for mAP-m computation refered in paper
-
 
         Returns
         -------
@@ -235,7 +233,6 @@ class ALFA:
         objects_boxes, objects_detector_names, objects_class_scores = self.bc.get_raw_candidate_objects(detectors_bounding_boxes,
                                                                                                 detectors_class_scores,
                                                                                                 tau, gamma,
-                                                                                                same_labels_only, use_BC,
                                                                                                 max_1_box_per_detector)
 
         objects = []
@@ -243,7 +240,7 @@ class ALFA:
             objects.append(Object(all_detectors_names, objects_detector_names[i],
                        objects_boxes[i],
                        objects_class_scores[i], bounding_box_fusion_method, class_scores_fusion_method,
-                       add_empty_detections, empty_epsilon, confidence_style))
+                       add_empty_detections, empty_epsilon))
 
         bounding_boxes = []
         class_scores = []
@@ -258,21 +255,7 @@ class ALFA:
         class_scores = np.array(class_scores)
         labels = np.array(labels)
 
-        if not single:
-            scores = np.concatenate(class_scores[:, 1:])
-            bounding_boxes = np.concatenate(
-                np.stack([bounding_boxes] * 20, axis=1))
-            labels = np.concatenate([range(20)] * len(labels))
-            class_scores = np.concatenate(
-                np.stack([class_scores] * 20, axis=1))
-
-            indices = np.where(scores > 0.01)[0]
-            bounding_boxes = bounding_boxes[indices]
-            labels = labels[indices]
-            class_scores = class_scores[indices]
-            scores = scores[indices]
-        else:
-            scores = np.array([class_scores[i, 1:][labels[i]] for i in range(len(class_scores))])
+        scores = np.array([class_scores[i, 1:][labels[i]] for i in range(len(class_scores))])
 
         labels, scores, bounding_boxes, class_scores, _ = bboxes_nms(
             labels, scores, bounding_boxes, class_scores,

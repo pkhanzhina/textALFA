@@ -3,14 +3,15 @@ from PIL import Image
 import os
 
 
-images_root_dir = '../ch4_test_images'
+images_root_dir = '../ICDAR2015/ch4_test_images'
 
 colors = {
     'gt': (255, 255, 255),
     'psenet': (0, 255, 0),
     'craft': (255, 0, 0),
-    'nms': (0, 0, 255),
-    'dontCare': (128, 128, 128)
+    'charnet': (0, 0, 255),
+    'nms': (255, 255, 0),
+    'dontCare': (200, 200, 200)
     }
 
 def visualize(img_key, confs, polygons, dontCare, method, img=None):
