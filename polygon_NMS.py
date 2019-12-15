@@ -17,7 +17,7 @@
 
 import numpy as np
 
-from IoU_computation import get_intersection_over_union
+from polygon_operations import get_intersection_over_union
 
 
 def polygons_nms(scores, polygons, nms_threshold=0.5):

@@ -9,19 +9,22 @@ colors = {
     'gt': (255, 255, 255),
     'psenet': (0, 255, 0),
     'craft': (255, 0, 0),
-    'nms': (0, 0, 255)
+    'nms': (0, 0, 255),
+    'dontCare': (128, 128, 128)
     }
 
-def visualize(img_key, confs, polygons, method, img=None):
+def visualize(img_key, confs, polygons, dontCare, method, img=None):
     if img is None:
         img = Image.open(os.path.join(images_root_dir, 'img_' + img_key + '.jpg'))
     plt.imshow(img)
     plt.axis('off')
-    color = colors[method]
-    color = (color[0] / 255., color[1] / 255., color[2] / 255.)
     for i in range(len(confs)):
         conf = confs[i]
         polygon = polygons[i][0]
+        color = colors[method]
+        if dontCare[i]:
+            color = colors['dontCare']
+        color = (color[0] / 255., color[1] / 255., color[2] / 255.)
         rect = plt.Polygon(polygon, fill=False,
                              edgecolor=color,
                              linewidth=2.0)
