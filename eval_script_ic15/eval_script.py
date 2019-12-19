@@ -18,9 +18,11 @@ def default_evaluation_params():
                 'DET_SAMPLE_NAME_2_ID':'res_img_([0-9]+).txt',
                 'LTRB':False, #LTRB:2points(left,top,right,bottom) or 4 points(x1,y1,x2,y2,x3,y3,x4,y4)
                 'CRLF':False, # Lines are delimited by Windows CRLF format
-                'CONFIDENCES':True, #Detections must include confidence value. AP will be calculated
+                'ANGLE':False, # Detections must include angle for bounding box
+                'CONFIDENCES':True, # Detections must include confidence value. AP will be calculated
                 'PER_SAMPLE_RESULTS':True #Generate per sample results and produce data for visualization
             }
+
 
 def validate_data(filePath, evaluationParams, isGT):
     """
@@ -32,15 +34,15 @@ def validate_data(filePath, evaluationParams, isGT):
         gt = rrc_evaluation_funcs.load_zip_file(filePath,evaluationParams['GT_SAMPLE_NAME_2_ID'])
         # Validate format of GroundTruth
         for k in gt:
-            rrc_evaluation_funcs.validate_lines_in_file(k, gt[k], evaluationParams['CRLF'], evaluationParams['LTRB'],
-                                                        True)
+            rrc_evaluation_funcs.validate_lines_in_file(k, gt[k], evaluationParams, withTranscription=True)
     else:
         subm = rrc_evaluation_funcs.load_zip_file(filePath,evaluationParams['DET_SAMPLE_NAME_2_ID'],True)
         #Validate format of results
         for k in subm:
             # if (k in gt) == False :
             #     raise Exception("The sample %s not present in GT" %k)
-            rrc_evaluation_funcs.validate_lines_in_file(k,subm[k],evaluationParams['CRLF'],evaluationParams['LTRB'],False,evaluationParams['CONFIDENCES'])
+            rrc_evaluation_funcs.validate_lines_in_file(k,subm[k],evaluationParams,
+                                                        withConfidence=evaluationParams['CONFIDENCES'])
 
 
 def compute_ap(confList, matchList, numGtCare):
@@ -115,7 +117,7 @@ def evaluate_method(gt, subm, evaluationParams):
 
         evaluationLog = ""
         
-        pointsList,_,transcriptionsList = rrc_evaluation_funcs.get_tl_line_values_from_file_contents(gtFile,evaluationParams['CRLF'],evaluationParams['LTRB'],True,False)
+        pointsList,_,transcriptionsList = rrc_evaluation_funcs.get_tl_line_values_from_file_contents(gtFile,evaluationParams,True,False)
         for n in range(len(pointsList)):
             points = pointsList[n]
             transcription = transcriptionsList[n]
@@ -136,7 +138,7 @@ def evaluate_method(gt, subm, evaluationParams):
             
             detFile = rrc_evaluation_funcs.decode_utf8(subm[resFile]) 
             
-            pointsList,confidencesList,_ = rrc_evaluation_funcs.get_tl_line_values_from_file_contents(detFile,evaluationParams['CRLF'],evaluationParams['LTRB'],False,evaluationParams['CONFIDENCES'])
+            pointsList,confidencesList,_ = rrc_evaluation_funcs.get_tl_line_values_from_file_contents(detFile,evaluationParams,False,evaluationParams['CONFIDENCES'])
             for n in range(len(pointsList)):
                 points = pointsList[n]
                 
