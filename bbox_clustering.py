@@ -217,8 +217,8 @@ class BoxClustering:
                 self.boxes = np.vstack((self.boxes, bounding_boxes[detector_name]))
                 self.actual_names += [detector_name] * detector_boxes
                 self.names = np.hstack((self.names, np.ones(detector_boxes) * detector_index))
-                self.angles = np.vstack((self.angles, angles[detector_name]))
-                self.scores = np.vstack((self.scores, scores[detector_name]))
+                self.angles = np.hstack((self.angles, angles[detector_name]))
+                self.scores = np.hstack((self.scores, scores[detector_name]))
             detector_index += 1
 
         self.prepare_matrix()
@@ -232,6 +232,7 @@ class BoxClustering:
         np_detectors = np.array(self.actual_names)
         np_boxes = np.array(self.boxes)
         np_angles = np.array(self.angles)
+        np_scores = np.array(self.scores)
         if len(self.whole_path_matrix):
             unique_whole_path_matrix = np.vstack({tuple(row) for row in self.whole_path_matrix})
             for i in range(0, len(unique_whole_path_matrix)):
@@ -242,7 +243,7 @@ class BoxClustering:
                         objects_detector_names.append(list(np_detectors[c]))
                         objects_boxes.append(np_boxes[c])
                         objects_angles.append(np_angles[c])
-                        objects_scores.append(scores[c])
+                        objects_scores.append(np_scores[c])
 
         return objects_detector_names, objects_boxes, objects_angles, objects_scores
 

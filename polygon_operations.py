@@ -48,13 +48,10 @@ def get_intersection(pD, pG):
 
 
 def get_union(pD, pG):
-    areaA = pD.area();
-    areaB = pG.area();
-    return areaA + areaB - get_intersection(pD, pG);
+    areaA = pD.area()
+    areaB = pG.area()
+    return areaA + areaB - get_intersection(pD, pG)
 
 
 def get_intersection_over_union(pD, pG):
-    # try:
-    return get_intersection(pD, pG) / get_union(pD, pG);
-    # except:
-    #     return 0
+    return get_intersection(pD, pG) / get_union(pD, pG)

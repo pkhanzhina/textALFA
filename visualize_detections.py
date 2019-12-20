@@ -11,10 +11,11 @@ colors = {
     'craft': (255, 0, 0),
     'charnet': (0, 0, 255),
     'nms': (255, 255, 0),
+    'text_alfa': (0, 255, 255),
     'dontCare': (200, 200, 200)
     }
 
-def visualize(img_key, confs, polygons, dontCare, method, img=None):
+def visualize_polygons(img_key, confs, polygons, dontCare, method, img=None, show=False):
     if img is None:
         img = Image.open(os.path.join(images_root_dir, 'img_' + img_key + '.jpg'))
     plt.imshow(img)
@@ -35,6 +36,33 @@ def visualize(img_key, confs, polygons, dontCare, method, img=None):
                            '{:.2f} | {:s}'.format(conf, method),
                            bbox=dict(facecolor=color, alpha=0.5),
                            fontsize=12, color='white')
-    if method == 'nms':
+    if show:
+        plt.show()
+    return img
+
+
+def visualize_boxes_with_angles(img_key, confs, boxes, angles, dontCare, method, img=None, show=False):
+    if img is None:
+        print(img_key)
+        img = Image.open(os.path.join(images_root_dir, 'img_' + img_key + '.jpg'))
+    plt.imshow(img)
+    plt.axis('off')
+    for i in range(len(confs)):
+        conf = confs[i]
+        box = boxes[i]
+        color = colors[method]
+        if dontCare[i]:
+            color = colors['dontCare']
+        color = (color[0] / 255., color[1] / 255., color[2] / 255.)
+        rect = plt.Rectangle((box[0], box[1]), box[2] - box[0], box[3] - box[1], fill=False,
+                             edgecolor=color,
+                             linewidth=2.0)
+        plt.gca().add_patch(rect)
+        if method != 'gt':
+            plt.gca().text(box[0], box[1],
+                           '{:.2f} | {:s}'.format(conf, method),
+                           bbox=dict(facecolor=color, alpha=0.5),
+                           fontsize=12, color='white')
+    if show:
         plt.show()
     return img

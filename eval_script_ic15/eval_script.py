@@ -3,11 +3,11 @@
 from collections import namedtuple
 import numpy as np
 
-import rrc_evaluation_funcs
+import eval_script_ic15.rrc_evaluation_funcs as rrc_evaluation_funcs
 from polygon_operations import *
 
 
-def default_evaluation_params():
+def polygon_evaluation_params():
     """
     default_evaluation_params: Default parameters to use for the validation and evaluation.
     """
@@ -22,6 +22,22 @@ def default_evaluation_params():
                 'CONFIDENCES':True, # Detections must include confidence value. AP will be calculated
                 'PER_SAMPLE_RESULTS':True #Generate per sample results and produce data for visualization
             }
+
+
+def box_with_angle_evaluation_params():
+    return {
+        'IOU_CONSTRAINT': 0.5,
+        'AREA_PRECISION_CONSTRAINT': 0.5,
+        'GT_SAMPLE_NAME_2_ID': 'gt_img_([0-9]+).txt',
+        'DET_SAMPLE_NAME_2_ID': 'res_img_([0-9]+).txt',
+        'LTRB': True,  # LTRB:2points(left,top,right,bottom) or 4 points(x1,y1,x2,y2,x3,y3,x4,y4)
+        'CRLF': False,  # Lines are delimited by Windows CRLF format
+        'ANGLE': True,  # Detections must include angle for bounding box
+        'CONFIDENCES': True,  # Detections must include confidence value. AP will be calculated
+        'PER_SAMPLE_RESULTS': True,  # Generate per sample results and produce data for visualization
+        'ANGLE_CONSTRAINT': np.pi / 8
+    }
+
 
 
 def validate_data(filePath, evaluationParams, isGT):
@@ -99,6 +115,9 @@ def evaluate_method(gt, subm, evaluationParams):
         
         gtPols = []
         detPols = []
+
+        gtAngles = []
+        detAngles = []
         
         gtPolPoints = []
         detPolPoints = []  
@@ -117,7 +136,7 @@ def evaluate_method(gt, subm, evaluationParams):
 
         evaluationLog = ""
         
-        pointsList,_,transcriptionsList = rrc_evaluation_funcs.get_tl_line_values_from_file_contents(gtFile,evaluationParams,True,False)
+        pointsList,anglesList,_,transcriptionsList = rrc_evaluation_funcs.get_tl_line_values_from_file_contents(gtFile,evaluationParams,True,False)
         for n in range(len(pointsList)):
             points = pointsList[n]
             transcription = transcriptionsList[n]
@@ -128,6 +147,8 @@ def evaluate_method(gt, subm, evaluationParams):
             else:
                 gtPol = polygon_from_points(points)
             gtPols.append(gtPol)
+            if evaluationParams['ANGLE']:
+                gtAngles.append(anglesList[n])
             gtPolPoints.append(points)
             if dontCare:
                 gtDontCarePolsNum.append( len(gtPols)-1 )
@@ -138,7 +159,7 @@ def evaluate_method(gt, subm, evaluationParams):
             
             detFile = rrc_evaluation_funcs.decode_utf8(subm[resFile]) 
             
-            pointsList,confidencesList,_ = rrc_evaluation_funcs.get_tl_line_values_from_file_contents(detFile,evaluationParams,False,evaluationParams['CONFIDENCES'])
+            pointsList,anglesList,confidencesList,_ = rrc_evaluation_funcs.get_tl_line_values_from_file_contents(detFile,evaluationParams,False,evaluationParams['CONFIDENCES'])
             for n in range(len(pointsList)):
                 points = pointsList[n]
                 
@@ -148,6 +169,8 @@ def evaluate_method(gt, subm, evaluationParams):
                 else:
                     detPol = polygon_from_points(points)                    
                 detPols.append(detPol)
+                if evaluationParams['ANGLE']:
+                    detAngles.append(anglesList[n])
                 detPolPoints.append(points)
                 if len(gtDontCarePolsNum)>0 :
                     for dontCarePol in gtDontCarePolsNum:
@@ -165,6 +188,7 @@ def evaluate_method(gt, subm, evaluationParams):
                 #Calculate IoU and precision matrixs
                 outputShape=[len(gtPols),len(detPols)]
                 iouMat = np.empty(outputShape)
+                angleMat = np.empty(outputShape)
                 gtRectMat = np.zeros(len(gtPols),np.int8)
                 detRectMat = np.zeros(len(detPols),np.int8)
                 for gtNum in range(len(gtPols)):
@@ -172,11 +196,17 @@ def evaluate_method(gt, subm, evaluationParams):
                         pG = gtPols[gtNum]
                         pD = detPols[detNum]
                         iouMat[gtNum,detNum] = get_intersection_over_union(pD,pG)
+                        if evaluationParams['ANGLE']:
+                            angleMat[gtNum, detNum] = np.abs(gtAngles[gtNum] - detAngles[detNum])
 
                 for gtNum in range(len(gtPols)):
                     for detNum in range(len(detPols)):
                         if gtRectMat[gtNum] == 0 and detRectMat[detNum] == 0 and gtNum not in gtDontCarePolsNum and detNum not in detDontCarePolsNum :
-                            if iouMat[gtNum,detNum]>evaluationParams['IOU_CONSTRAINT']:
+                            iou_pass = iouMat[gtNum,detNum]>evaluationParams['IOU_CONSTRAINT']
+                            angle_pass = True
+                            if evaluationParams['ANGLE']:
+                                angle_pass = angleMat[gtNum, detNum] < evaluationParams['ANGLE_CONSTRAINT']
+                            if iou_pass and angle_pass:
                                 gtRectMat[gtNum] = 1
                                 detRectMat[detNum] = 1
                                 detMatched += 1
@@ -193,8 +223,8 @@ def evaluate_method(gt, subm, evaluationParams):
                         arrSampleConfidences.append(confidencesList[detNum])
                         arrSampleMatch.append(match)
 
-                        arrGlobalConfidences.append(confidencesList[detNum]);
-                        arrGlobalMatches.append(match);
+                        arrGlobalConfidences.append(confidencesList[detNum])
+                        arrGlobalMatches.append(match)
                             
         numGtCare = (len(gtPols) - len(gtDontCarePolsNum))
         numDetCare = (len(detPols) - len(detDontCarePolsNum))
@@ -244,19 +274,22 @@ def evaluate_method(gt, subm, evaluationParams):
     resDict = {'calculated':True,'Message':'','method': methodMetrics,'per_sample': perSampleMetrics}
     
     
-    return resDict;
+    return resDict
 
 
 
 if __name__=='__main__':
     p = {
-        'g': '../gt_ic15/gt_ic15.zip',
+        # 'g': '../gt_ic15/gt_ic15.zip',
+        'g': '../gt_ic15/gt_ic15_rect.zip',
         # 's': '../res_craft_ic15/res_craft_ic15_015_weighted.zip'
         # 's': '../res_psenet_ic15/res_psenet_ic15_015.zip'
         # 's': '../res_charnet_ic15/res_charnet_ic15_015.zip'
         # 's': '../res_nms_ic15/res_nms_ic15_craft_015_mean_psenet_015.zip'
         # 's': '../res_nms_ic15/res_nms_ic15_craft_015_weighted_charnet_015.zip'
-        's': '../res_nms_ic15/res_nms_ic15_psenet_015_craft_015_weighted_charnet_015.zip'
+        # 's': '../res_nms_ic15/res_nms_ic15_psenet_015_craft_015_weighted_charnet_015.zip'
+        's': '../res_text_alfa_ic15/res_text_alfa_ic15_psenet_015_craft_015_weighted_charnet_015_rect.zip'
     }
-    evalParams = default_evaluation_params()
+    # evalParams = polygon_evaluation_params()
+    evalParams = box_with_angle_evaluation_params()
     rrc_evaluation_funcs.main_evaluation(p, evalParams, validate_data, evaluate_method)

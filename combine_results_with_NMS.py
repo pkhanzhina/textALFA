@@ -3,10 +3,10 @@ import numpy as np
 from zipfile import ZipFile
 
 from eval_script_ic15.rrc_evaluation_funcs import load_zip_file, get_tl_line_values_from_file_contents, decode_utf8
-from eval_script_ic15.eval_script import default_evaluation_params, validate_data
+from eval_script_ic15.eval_script import polygon_evaluation_params, validate_data
 from polygon_operations import polygon_from_points
 from polygon_NMS import polygons_NMS
-from visualize_detections import visualize
+from visualize_detections import visualize_polygons
 
 do_visualization = False
 using_detections = [
@@ -26,7 +26,7 @@ gtFilePath = './gt_ic15/gt_ic15.zip'
 result_name = 'res_nms_ic15_' + '_'.join(using_detections)
 
 if __name__ == '__main__':
-    evalParams = default_evaluation_params()
+    evalParams = polygon_evaluation_params()
     for key in using_detections:
         validate_data(allDetFilePaths[key], evalParams, isGT=False)
     subm_dict = {}
@@ -45,8 +45,7 @@ if __name__ == '__main__':
         gtPols = []
         gtConfs = []
         gtDontCare = []
-        pointsList, _, transcriptionsList = get_tl_line_values_from_file_contents(gtFile, evalParams['CRLF'],
-                                                                            evalParams['LTRB'], True, False)
+        pointsList, _, transcriptionsList = get_tl_line_values_from_file_contents(gtFile, evalParams, True, False)
         for i in range(len(pointsList)):
             points = pointsList[i]
             transcription = transcriptionsList[i]
@@ -56,13 +55,13 @@ if __name__ == '__main__':
             gtPols.append(gtPol)
             gtConfs.append(1.0)
         if do_visualization:
-            img = visualize(img_key, gtConfs, gtPols, gtDontCare, 'gt')
+            img = visualize_polygons(img_key, gtConfs, gtPols, gtDontCare, 'gt')
         joined_img_polygons = []
         joined_img_confs = []
         for detector_key in detector_keys:
             detFile = subm_dict[detector_key][img_key]
-            pointsList, confidencesList, _ = get_tl_line_values_from_file_contents(detFile,
-                                            evalParams['CRLF'], evalParams['LTRB'], False, evalParams['CONFIDENCES'])
+            pointsList, confidencesList, _ = get_tl_line_values_from_file_contents(detFile, evalParams, False,
+                                                                                   evalParams['CONFIDENCES'])
             detPols = []
             for i in range(len(pointsList)):
                 points = pointsList[i]
@@ -71,10 +70,11 @@ if __name__ == '__main__':
                 joined_img_polygons.append(detPol)
                 joined_img_confs.append(confidencesList[i])
             if do_visualization:
-                visualize(img_key, confidencesList, detPols, [False] * len(detPols), detector_key, img)
+                visualize_polygons(img_key, confidencesList, detPols, [False] * len(detPols), detector_key, img)
         new_img_confs, new_img_polygons = polygons_NMS(joined_img_confs, joined_img_polygons)
         if do_visualization:
-            visualize(img_key, new_img_confs, new_img_polygons, [False] * len(new_img_confs), 'nms', img)
+            visualize_polygons(img_key, new_img_confs, new_img_polygons, [False] * len(new_img_confs), 'nms', img,
+                               show=True)
         joined_subm_dict[img_key] = (new_img_confs, new_img_polygons)
     zip_filename = os.path.join('./res_nms_ic15', result_name + '.zip')
     with ZipFile(zip_filename, 'w') as zipped_f:

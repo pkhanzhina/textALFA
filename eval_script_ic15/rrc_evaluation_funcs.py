@@ -134,6 +134,8 @@ def get_tl_line_values(line,evaluationParams,withTranscription=False,withConfide
     LTRB=False: x1,y1,x2,y2,x3,y3,x4,y4[,confidence][,transcription] 
     Returns values from a textline. Points , [Confidences], [Transcriptions]
     """
+    points = []
+    angle = []
     confidence = 0.0
     transcription = ""
 
@@ -174,6 +176,10 @@ def get_tl_line_values(line,evaluationParams,withTranscription=False,withConfide
         ymin = int(m.group(2))
         xmax = int(m.group(3))
         ymax = int(m.group(4))
+        if xmin > xmax:
+            xmin, xmax = xmax, xmin
+        if ymin > ymax:
+            ymin, ymax = ymax, ymin
         if (xmax < xmin):
             raise Exception("Xmax value (%s) not valid (Xmax < Xmin)." % (xmax))
         if (ymax < ymin):
@@ -209,7 +215,7 @@ def get_tl_line_values(line,evaluationParams,withTranscription=False,withConfide
         if m2 != None : #Transcription with double quotes, we extract the value and replace escaped characters
             transcription = m2.group(1).replace("\\\\", "\\").replace("\\\"", "\"")
     
-    return points,confidence,transcription
+    return points,angle,confidence,transcription
     
             
 def validate_point_inside_bounds(x,y,imWidth,imHeight):
@@ -252,6 +258,7 @@ def get_tl_line_values_from_file_contents(content,evaluation_params,withTranscri
     x1,y1,x2,y2,x3,y3,x4,y4,[confidence],[transcription]
     """
     pointsList = []
+    anglesList = []
     transcriptionsList = []
     confidencesList = []
     
@@ -259,8 +266,9 @@ def get_tl_line_values_from_file_contents(content,evaluation_params,withTranscri
     for line in lines:
         line = line.replace("\r","").replace("\n","")
         if(line != "") :
-            points, confidence, transcription = get_tl_line_values(line,evaluation_params,withTranscription,withConfidence,imWidth,imHeight)
+            points, angle, confidence, transcription = get_tl_line_values(line,evaluation_params,withTranscription,withConfidence,imWidth,imHeight)
             pointsList.append(points)
+            anglesList.append(angle)
             transcriptionsList.append(transcription)
             confidencesList.append(confidence)
 
@@ -269,9 +277,10 @@ def get_tl_line_values_from_file_contents(content,evaluation_params,withTranscri
         sorted_ind = np.argsort(-np.array(confidencesList))
         confidencesList = [confidencesList[i] for i in sorted_ind]
         pointsList = [pointsList[i] for i in sorted_ind]
+        anglesList = [anglesList[i] for i in sorted_ind]
         transcriptionsList = [transcriptionsList[i] for i in sorted_ind]        
         
-    return pointsList,confidencesList,transcriptionsList
+    return pointsList,anglesList,confidencesList,transcriptionsList
 
 def main_evaluation(p,evalParams,validate_data_fn,evaluate_method_fn,show_result=True,per_sample=True):
     """
