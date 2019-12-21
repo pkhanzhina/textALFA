@@ -159,12 +159,13 @@ def get_tl_line_values(line,evaluationParams,withTranscription=False,withConfide
         full_pattern[0] += ',' + pattern
         full_error_message[0] += ',' + string
         params_indices[string] = last_index
-        last_index += 1
 
     if evaluationParams['ANGLE']:
         add_info(angle_pattern, angle_string, full_pattern, full_error_message, last_index)
+        last_index += 1
     if withConfidence:
         add_info(confidence_pattern, confidence_string, full_pattern, full_error_message, last_index)
+        last_index += 1
     if withTranscription:
         add_info(transcription_pattern, transcription_string, full_pattern, full_error_message, last_index)
     m = re.match(full_pattern[0],line)
@@ -301,19 +302,19 @@ def main_evaluation(p,evalParams,validate_data_fn,evaluate_method_fn,show_result
         evalParams.update( p['p'] if isinstance(p['p'], dict) else json.loads(p['p'][1:-1]))
 
     resDict={'calculated':True,'Message':'','method':'{}','per_sample':'{}'}    
-    try:
-        gtFilePath = p['g']
-        submFilePath = p['s']
-        validate_data_fn(gtFilePath, evalParams, isGT=True)
-        validate_data_fn(submFilePath, evalParams, isGT=False)
-        gt = load_zip_file(gtFilePath, evalParams['GT_SAMPLE_NAME_2_ID'])
-        subm = load_zip_file(submFilePath, evalParams['DET_SAMPLE_NAME_2_ID'], True)
-        evalData = evaluate_method_fn(gt, subm, evalParams)
-        resDict.update(evalData)
-        
-    except Exception as e:
-        resDict['Message']= str(e)
-        resDict['calculated']=False
+    # try:
+    gtFilePath = p['g']
+    submFilePath = p['s']
+    validate_data_fn(gtFilePath, evalParams, isGT=True)
+    validate_data_fn(submFilePath, evalParams, isGT=False)
+    gt = load_zip_file(gtFilePath, evalParams['GT_SAMPLE_NAME_2_ID'])
+    subm = load_zip_file(submFilePath, evalParams['DET_SAMPLE_NAME_2_ID'], True)
+    evalData = evaluate_method_fn(gt, subm, evalParams)
+    resDict.update(evalData)
+
+    # except Exception as e:
+    #     resDict['Message']= str(e)
+    #     resDict['calculated']=False
 
     if 'o' in p:
         if not os.path.exists(p['o']):

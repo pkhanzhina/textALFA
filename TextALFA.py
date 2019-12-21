@@ -126,7 +126,7 @@ class TextALFA:
 
     def TextALFA_result(self, all_detectors_names, detectors_bounding_boxes, detectors_bounding_boxes_angles,
                     detectors_scores, tau, gamma, bounding_box_fusion_method, scores_fusion_method,
-                    add_empty_detections, empty_epsilon, max_1_box_per_detector):
+                    add_empty_detections, empty_epsilon, use_angle, max_1_box_per_detector):
         """
         TextALFA algorithm
 
@@ -198,6 +198,10 @@ class TextALFA:
         empty_epsilon : float
             Parameter epsilon in the paper, between [0.0, 1.0]
 
+        use_angle : boolean
+            True - cos of angle diff and Jaccard coefficient will be used to compute detections similarity score
+            False - only Jaccard coefficient will be used to compute detections similarity score
+
         max_1_box_per_detector : boolean
             True - only one detection form detector could be added to cluster
             False - multiple detections from same detector could be added to cluster
@@ -213,7 +217,7 @@ class TextALFA:
 
         objects_detector_names, objects_boxes, objects_angles, objects_scores = \
             self.bc.get_raw_candidate_objects(detectors_bounding_boxes, detectors_bounding_boxes_angles,
-                                              detectors_scores, tau, gamma, max_1_box_per_detector)
+                                              detectors_scores, tau, gamma, use_angle, max_1_box_per_detector)
 
         objects = []
         for i in range(0, len(objects_boxes)):

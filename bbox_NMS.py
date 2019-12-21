@@ -64,7 +64,7 @@ def bbox_NMS(scores, bboxes, angles, nms_threshold=0.5, angle_threshold=np.pi / 
             # Computer overlap with bboxes which are following.
             overlap = bboxes_jaccard(bboxes[i], bboxes[(i+1):])
             keep_overlap = np.logical_and(overlap < nms_threshold,
-                                          np.abs(angles[i] - angles[(i+1):]) < angle_threshold)
+                np.min(np.abs(angles[i] - angles[(i+1):]), 2 * np.pi - np.abs(angles[i] - angles[(i+1):])) < angle_threshold)
             keep_bboxes[(i+1):] = np.logical_and(keep_bboxes[(i+1):], keep_overlap)
 
     idxes = np.where(keep_bboxes)

@@ -8,7 +8,7 @@ from polygon_operations import polygon_from_points
 from polygon_NMS import polygons_NMS
 from visualize_detections import visualize_polygons
 
-do_visualization = False
+do_visualization = True
 using_detections = [
     'psenet_015',
     'craft_015_weighted',
@@ -45,7 +45,7 @@ if __name__ == '__main__':
         gtPols = []
         gtConfs = []
         gtDontCare = []
-        pointsList, _, transcriptionsList = get_tl_line_values_from_file_contents(gtFile, evalParams, True, False)
+        pointsList, _, _, transcriptionsList = get_tl_line_values_from_file_contents(gtFile, evalParams, True, False)
         for i in range(len(pointsList)):
             points = pointsList[i]
             transcription = transcriptionsList[i]
@@ -60,7 +60,7 @@ if __name__ == '__main__':
         joined_img_confs = []
         for detector_key in detector_keys:
             detFile = subm_dict[detector_key][img_key]
-            pointsList, confidencesList, _ = get_tl_line_values_from_file_contents(detFile, evalParams, False,
+            pointsList, _, confidencesList, _ = get_tl_line_values_from_file_contents(detFile, evalParams, False,
                                                                                    evalParams['CONFIDENCES'])
             detPols = []
             for i in range(len(pointsList)):

@@ -46,8 +46,9 @@ class BoxClustering:
         if self.max_1_box_per_detector:
             s_diff = fastDiff(self.names)
             self.sim_matrix = self.sim_matrix * (s_diff +  + np.eye(self.n_boxes))
-        a_sim = fastAngleSame(self.angles)
-        self.sim_matrix = np.power(self.sim_matrix, self.power_iou) * np.power(a_sim, 1.0 - self.power_iou)
+        if self.use_angle:
+            a_sim = fastAngleSame(self.angles)
+            self.sim_matrix = np.power(self.sim_matrix, self.power_iou) * np.power(a_sim, 1.0 - self.power_iou)
         self.path_matrix = np.greater_equal(self.sim_matrix, self.hard_threshold).astype(int)
 
 
@@ -116,7 +117,7 @@ class BoxClustering:
         return min_sim
 
 
-    def get_raw_candidate_objects(self, bounding_boxes, angles, scores, tau, gamma, max_1_box_per_detector):
+    def get_raw_candidate_objects(self, bounding_boxes, angles, scores, tau, gamma, use_angle, max_1_box_per_detector):
         """
         Clusters detections from different detectors.
 
@@ -172,8 +173,8 @@ class BoxClustering:
             True - only detections with same class label will be added into same cluster
             False - detections labels won't be taken into account while clustering
 
-        use_BC : boolean
-            True - Bhattacharyya and Jaccard coefficient will be used to compute detections similarity score
+        use_angle : boolean
+            True - cos of angle diff and Jaccard coefficient will be used to compute detections similarity score
             False - only Jaccard coefficient will be used to compute detections similarity score
 
         max_1_box_per_detector : boolean
@@ -198,6 +199,7 @@ class BoxClustering:
 
         self.hard_threshold = tau
         self.power_iou = gamma
+        self.use_angle = use_angle
         self.max_1_box_per_detector = max_1_box_per_detector
 
         self.detector_names = list(bounding_boxes.keys())

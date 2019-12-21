@@ -7,7 +7,7 @@ from eval_script_ic15.eval_script import box_with_angle_evaluation_params, valid
 from visualize_detections import visualize_boxes_with_angles
 from TextALFA import TextALFA
 
-do_visualization = False
+do_visualization = True
 using_detections = [
     'psenet_015',
     'craft_015_weighted',
@@ -74,9 +74,10 @@ if __name__ == '__main__':
         new_img_boxes, new_img_angles, new_img_confs = text_alfa.TextALFA_result(detector_keys, joined_img_boxes,
                                                                 joined_img_angles, joined_img_confs, tau=0.5, gamma=0.5,
                                                                 bounding_box_fusion_method='WEIGHTED AVERAGE',
-                                                                 scores_fusion_method='AVERAGE',
+                                                                scores_fusion_method='AVERAGE',
                                                                 add_empty_detections=True,
-                                                                empty_epsilon=0.1, max_1_box_per_detector=True)
+                                                                empty_epsilon=0.1, use_angle=True,
+                                                                max_1_box_per_detector=True)
         if do_visualization:
             visualize_boxes_with_angles(img_key, new_img_confs, new_img_boxes, new_img_angles,
                                         [False] * len(new_img_confs), 'text_alfa', img, show=True)
