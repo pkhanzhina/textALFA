@@ -17,6 +17,7 @@
 
 import numpy as np
 
+
 def bboxes_jaccard(bboxes1, bboxes2):
     """Computing jaccard index between bboxes1 and bboxes2.
     Note: bboxes1 and bboxes2 can be multi-dimensional, but should broacastable.
@@ -52,6 +53,7 @@ def bboxes_clip(bbox_ref, bboxes):
     bboxes = np.transpose(bboxes)
     return bboxes
 
+
 def bbox_NMS(scores, bboxes, angles, nms_threshold=0.5, angle_threshold=np.pi / 8):
     """Apply non-maximum selection to bounding boxes.
     """
@@ -59,13 +61,18 @@ def bbox_NMS(scores, bboxes, angles, nms_threshold=0.5, angle_threshold=np.pi / 
     scores = scores[sorted_ind]
     bboxes = bboxes[sorted_ind]
     keep_bboxes = np.ones(scores.shape, dtype=np.bool)
-    for i in range(scores.size-1):
+    for i in range(scores.size - 1):
         if keep_bboxes[i]:
             # Computer overlap with bboxes which are following.
-            overlap = bboxes_jaccard(bboxes[i], bboxes[(i+1):])
+            overlap = bboxes_jaccard(bboxes[i], bboxes[(i + 1):])
+
+            temp = np.abs(angles[i] - angles[(i + 1)])
+            # old: temp = np.abs(angles[i] - angles[(i + 1):])
+
             keep_overlap = np.logical_and(overlap < nms_threshold,
-                np.min(np.abs(angles[i] - angles[(i+1):]), 2 * np.pi - np.abs(angles[i] - angles[(i+1):])) < angle_threshold)
-            keep_bboxes[(i+1):] = np.logical_and(keep_bboxes[(i+1):], keep_overlap)
+                                          min(temp, 2 * np.pi - temp) < angle_threshold)
+
+            keep_bboxes[(i + 1):] = np.logical_and(keep_bboxes[(i + 1):], keep_overlap)
 
     idxes = np.where(keep_bboxes)
     return bboxes[idxes], angles[idxes], scores[idxes]
