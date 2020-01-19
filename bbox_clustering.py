@@ -32,8 +32,8 @@ def fastAngleSame(angles):
     a0[:] = angles
     a_diff_1 = np.abs(a0 - a0.T)
     a_diff_2 = 2 * np.pi - a_diff_1
-    a_diff = np.where(a_diff_1 < a_diff_2, a_diff_1, a_diff_2)
-    a_sim = np.cos(a_diff)
+    a_diff = np.minimum(a_diff_1, a_diff_2)
+    a_sim = (np.cos(a_diff) + 1.) / 2.
     return a_sim
 
 
@@ -45,7 +45,7 @@ class BoxClustering:
         self.sim_matrix = fastIoU(self.boxes)
         if self.max_1_box_per_detector:
             s_diff = fastDiff(self.names)
-            self.sim_matrix = self.sim_matrix * (s_diff +  + np.eye(self.n_boxes))
+            self.sim_matrix = self.sim_matrix * (s_diff + np.eye(self.n_boxes))
         if self.use_angle:
             a_sim = fastAngleSame(self.angles)
             self.sim_matrix = np.power(self.sim_matrix, self.power_iou) * np.power(a_sim, 1.0 - self.power_iou)

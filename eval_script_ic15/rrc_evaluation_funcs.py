@@ -173,10 +173,10 @@ def get_tl_line_values(line,evaluationParams,withTranscription=False,withConfide
         raise Exception(full_error_message[0])
 
     if numPoints == 4:
-        xmin = int(m.group(1))
-        ymin = int(m.group(2))
-        xmax = int(m.group(3))
-        ymax = int(m.group(4))
+        xmin = float(m.group(1))
+        ymin = float(m.group(2))
+        xmax = float(m.group(3))
+        ymax = float(m.group(4))
         if xmin > xmax:
             xmin, xmax = xmax, xmin
         if ymin > ymax:
@@ -185,12 +185,12 @@ def get_tl_line_values(line,evaluationParams,withTranscription=False,withConfide
             raise Exception("Xmax value (%s) not valid (Xmax < Xmin)." % (xmax))
         if (ymax < ymin):
             raise Exception("Ymax value (%s)  not valid (Ymax < Ymin)." % (ymax))
-        points = [float(m.group(i)) for i in range(1, (numPoints + 1))]
+        points = [xmin, ymin, xmax, ymax]
         if (imWidth > 0 and imHeight > 0):
             validate_point_inside_bounds(xmin, ymin, imWidth, imHeight)
             validate_point_inside_bounds(xmax, ymax, imWidth, imHeight)
     else:
-        points = [ float(m.group(i)) for i in range(1, (numPoints+1) ) ]
+        points = [float(m.group(i)) for i in range(1, (numPoints+1))]
         validate_clockwise_points(points)
         if (imWidth>0 and imHeight>0):
             validate_point_inside_bounds(points[0],points[1],imWidth,imHeight)

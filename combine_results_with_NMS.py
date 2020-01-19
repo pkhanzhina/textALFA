@@ -69,8 +69,8 @@ if __name__ == '__main__':
                 detPols.append(detPol)
                 joined_img_polygons.append(detPol)
                 joined_img_confs.append(confidencesList[i])
-            if do_visualization:
-                visualize_polygons(img_key, confidencesList, detPols, [False] * len(detPols), detector_key, img)
+            # if do_visualization:
+            #     visualize_polygons(img_key, confidencesList, detPols, [False] * len(detPols), detector_key, img)
         new_img_confs, new_img_polygons = polygons_NMS(joined_img_confs, joined_img_polygons)
         if do_visualization:
             visualize_polygons(img_key, new_img_confs, new_img_polygons, [False] * len(new_img_confs), 'nms', img,
