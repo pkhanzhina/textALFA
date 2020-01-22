@@ -239,7 +239,7 @@ class TextALFA:
         angles = np.array(angles)
         scores = np.array(scores)
 
-        # bounding_boxes, angles, scores = bbox_NMS(scores, bounding_boxes, angles)
+        bounding_boxes, angles, scores = bbox_NMS(scores, bounding_boxes, angles, angle_threshold=2 * np.pi)
         return bounding_boxes, angles, scores
 
 

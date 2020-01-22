@@ -58,7 +58,8 @@ if __name__ == '__main__':
             img = visualize_polygons(img_key, gtConfs, gtPols, gtDontCare, 'gt')
         joined_img_polygons = []
         joined_img_confs = []
-        for detector_key in detector_keys:
+        for j in range(len(detector_keys)):
+            detector_key = detector_keys[j]
             detFile = subm_dict[detector_key][img_key]
             pointsList, _, confidencesList, _ = get_tl_line_values_from_file_contents(detFile, evalParams, False,
                                                                                    evalParams['CONFIDENCES'])
@@ -69,18 +70,21 @@ if __name__ == '__main__':
                 detPols.append(detPol)
                 joined_img_polygons.append(detPol)
                 joined_img_confs.append(confidencesList[i])
-            # if do_visualization:
-            #     visualize_polygons(img_key, confidencesList, detPols, [False] * len(detPols), detector_key, img)
-        new_img_confs, new_img_polygons = polygons_NMS(joined_img_confs, joined_img_polygons)
-        if do_visualization:
-            visualize_polygons(img_key, new_img_confs, new_img_polygons, [False] * len(new_img_confs), 'nms', img,
-                               show=True)
-        joined_subm_dict[img_key] = (new_img_confs, new_img_polygons)
-    zip_filename = os.path.join('./res_nms_ic15', result_name + '.zip')
-    with ZipFile(zip_filename, 'w') as zipped_f:
-        for img_key in img_keys:
-            new_img_confs, new_img_polygons = joined_subm_dict[img_key]
-            output_filename = 'res_img_%s.txt' % img_key
-            zipped_f.writestr(output_filename,
-                '\n'.join([','.join(list(np.reshape(new_img_polygons[i][0], -1).astype('int32').astype('string')) +
-                                    [str(new_img_confs[i])]) for i in range(len(new_img_confs))]))
+            if do_visualization:
+                show=False
+                if (j + 1) == len(detector_keys):
+                    show = True
+                visualize_polygons(img_key, confidencesList, detPols, [False] * len(detPols), detector_key, img, show=show)
+    #     new_img_confs, new_img_polygons = polygons_NMS(joined_img_confs, joined_img_polygons)
+    #     if do_visualization:
+    #         visualize_polygons(img_key, new_img_confs, new_img_polygons, [False] * len(new_img_confs), 'nms', img,
+    #                            show=True)
+    #     joined_subm_dict[img_key] = (new_img_confs, new_img_polygons)
+    # zip_filename = os.path.join('./res_nms_ic15', result_name + '.zip')
+    # with ZipFile(zip_filename, 'w') as zipped_f:
+    #     for img_key in img_keys:
+    #         new_img_confs, new_img_polygons = joined_subm_dict[img_key]
+    #         output_filename = 'res_img_%s.txt' % img_key
+    #         zipped_f.writestr(output_filename,
+    #             '\n'.join([','.join(list(np.reshape(new_img_polygons[i][0], -1).astype('int32').astype('string')) +
+    #                                 [str(new_img_confs[i])]) for i in range(len(new_img_confs))]))

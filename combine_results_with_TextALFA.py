@@ -7,7 +7,7 @@ from eval_script_ic15.eval_script import box_with_angle_evaluation_params, valid
 from visualize_detections import visualize_boxes_with_angles
 from TextALFA import TextALFA
 
-do_visualization = False
+do_visualization = True
 using_detections = [
     'psenet_015',
     'craft_015_weighted',
@@ -61,7 +61,8 @@ if __name__ == '__main__':
         joined_img_boxes = {}
         joined_img_angles = {}
         joined_img_confs = {}
-        for detector_key in detector_keys:
+        for j in range(len(detector_keys)):
+            detector_key = detector_keys[j]
             detFile = subm_dict[detector_key][img_key]
             pointsList, anglesList, confidencesList, _ = get_tl_line_values_from_file_contents(detFile, evalParams,
                                                                                      False, evalParams['CONFIDENCES'])
@@ -69,26 +70,29 @@ if __name__ == '__main__':
             joined_img_angles[detector_key] = anglesList
             joined_img_confs[detector_key] = confidencesList
             if do_visualization:
+                show = False
+                if (j + 1) == len(detector_keys):
+                    show = True
                 visualize_boxes_with_angles(img_key, confidencesList, pointsList, anglesList, [False] * len(pointsList),
-                                            detector_key)
-        new_img_boxes, new_img_angles, new_img_confs = text_alfa.TextALFA_result(detector_keys, joined_img_boxes,
-                                                                joined_img_angles, joined_img_confs, tau=0.1, gamma=0.5,
-                                                                bounding_box_fusion_method='WEIGHTED AVERAGE',
-                                                                scores_fusion_method='AVERAGE',
-                                                                add_empty_detections=True,
-                                                                empty_epsilon=0.1, use_angle=False,
-                                                                max_1_box_per_detector=True)
-        if do_visualization:
-            visualize_boxes_with_angles(img_key, new_img_confs, new_img_boxes, new_img_angles,
-                                        [False] * len(new_img_confs), 'text_alfa', img, show=True)
-        joined_subm_dict[img_key] = new_img_boxes, new_img_angles, new_img_confs
-    zip_filename = os.path.join('./res_text_alfa_ic15', result_name + '.zip')
-    with ZipFile(zip_filename, 'w') as zipped_f:
-        for img_key in img_keys:
-            new_img_boxes, new_img_angles, new_img_confs = joined_subm_dict[img_key]
-            output_filename = 'res_img_%s.txt' % img_key
-            zipped_f.writestr(output_filename,
-                              '\n'.join([','.join(
-                                  list(np.reshape(new_img_boxes[i], -1).astype('int32').astype('string')) +
-                                  [str(new_img_angles[i])] +
-                                  [str(new_img_confs[i])]) for i in range(len(new_img_confs))]))
+                                            detector_key, show=show)
+        # new_img_boxes, new_img_angles, new_img_confs = text_alfa.TextALFA_result(detector_keys, joined_img_boxes,
+        #                                                         joined_img_angles, joined_img_confs, tau=0.1, gamma=0.5,
+        #                                                         bounding_box_fusion_method='WEIGHTED AVERAGE',
+        #                                                         scores_fusion_method='AVERAGE',
+        #                                                         add_empty_detections=True,
+        #                                                         empty_epsilon=0.1, use_angle=False,
+        #                                                         max_1_box_per_detector=True)
+        # if do_visualization:
+        #     visualize_boxes_with_angles(img_key, new_img_confs, new_img_boxes, new_img_angles,
+        #                                 [False] * len(new_img_confs), 'text_alfa', img, show=True)
+        # joined_subm_dict[img_key] = new_img_boxes, new_img_angles, new_img_confs
+    # zip_filename = os.path.join('./res_text_alfa_ic15', result_name + '.zip')
+    # with ZipFile(zip_filename, 'w') as zipped_f:
+    #     for img_key in img_keys:
+    #         new_img_boxes, new_img_angles, new_img_confs = joined_subm_dict[img_key]
+    #         output_filename = 'res_img_%s.txt' % img_key
+    #         zipped_f.writestr(output_filename,
+    #                           '\n'.join([','.join(
+    #                               list(np.reshape(new_img_boxes[i], -1).astype('int32').astype('string')) +
+    #                               [str(new_img_angles[i])] +
+    #                               [str(new_img_confs[i])]) for i in range(len(new_img_confs))]))
