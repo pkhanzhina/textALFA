@@ -1,8 +1,8 @@
 # (c) Evgeny Razinkov, Kazan Federal University, 2017
 import numpy as np
 
-import bbox_clustering as bbox_clustering
-from bbox_NMS import bbox_NMS
+from NMS.NMS_bbox import bbox_NMS
+from TextALFA_bbox import clustering_bbox as bbox_clustering
 
 
 class Object:

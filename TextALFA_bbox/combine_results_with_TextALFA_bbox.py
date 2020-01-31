@@ -1,11 +1,7 @@
-import os
-import numpy as np
-from zipfile import ZipFile
-
-from eval_script_ic15.rrc_evaluation_funcs import load_zip_file, get_tl_line_values_from_file_contents, decode_utf8
+from TextALFA_bbox import TextALFA
 from eval_script_ic15.eval_script import box_with_angle_evaluation_params, validate_data
-from visualize_detections import visualize_boxes_with_angles
-from TextALFA import TextALFA
+from eval_script_ic15.rrc_evaluation_funcs import load_zip_file, get_tl_line_values_from_file_contents, decode_utf8
+from utils.visualize_detections import visualize_boxes_with_angles
 
 do_visualization = True
 using_detections = [
