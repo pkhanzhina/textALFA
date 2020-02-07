@@ -283,14 +283,14 @@ if __name__=='__main__':
     p = {
         'g': './gt_ic15/gt_ic15.zip',
         # 'g': './gt_ic15/gt_ic15_rect.zip',
-        's': './res_craft_ic15/res_craft_ic15_015_weighted.zip'
+        # 's': './res_craft_ic15/res_craft_ic15_015_weighted.zip'
         # 's': './res_psenet_ic15/res_psenet_ic15_015.zip'
         # 's': './res_charnet_ic15/res_charnet_ic15_015.zip'
-        # 's': './res_nms_ic15/res_nms_ic15_psenet_015_craft_015_weighted_charnet_015.zip'
+        's': './res_nms_ic15/res_nms_ic15_psenet_015_craft_015_weighted_charnet_015.zip'
         # 's': './res_craft_ic15/res_craft_ic15_015_weighted_rect.zip',
         # 's': './res_psenet_ic15/res_psenet_ic15_015_rect.zip',
         # 's': './res_charnet_ic15/res_charnet_ic15_015_rect.zip',
-        # 's': './res_text_alfa_ic15/res_text_alfa_ic15_psenet_015_craft_015_weighted_charnet_015_rect.zip'
+        # 's': './res_text_alfa_bbox_ic15/res_text_alfa_bbox_ic15_psenet_015_craft_015_weighted_charnet_015_rect.zip'
     }
     evalParams = polygon_evaluation_params()
     # evalParams = box_with_angle_evaluation_params()

@@ -54,7 +54,7 @@ def bboxes_clip(bbox_ref, bboxes):
     return bboxes
 
 
-def bbox_NMS(scores, bboxes, angles, nms_threshold=0.5, angle_threshold=np.pi / 8):
+def NMS_bbox(scores, bboxes, angles, nms_threshold=0.5, angle_threshold=np.pi / 8):
     """Apply non-maximum selection to bounding boxes.
     """
     sorted_ind = np.argsort(-scores)

@@ -20,7 +20,7 @@ import numpy as np
 from utils.polygon_operations import get_intersection_over_union
 
 
-def polygons_NMS(scores, polygons, nms_threshold=0.5):
+def NMS_polygon(scores, polygons, nms_threshold=0.5):
     """Apply non-maximum selection to bounding boxes.
     """
     sorted_ind = np.argsort(scores)[::-1]

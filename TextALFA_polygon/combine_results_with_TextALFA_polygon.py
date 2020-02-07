@@ -1,7 +1,12 @@
-from TextALFA_bbox import TextALFA
-from eval_script_ic15.eval_script import box_with_angle_evaluation_params, validate_data
+import os
+from zipfile import ZipFile
+import numpy as np
+
+from TextALFA_polygon import TextALFA
+from eval_script_ic15.eval_script import polygon_evaluation_params, validate_data
 from eval_script_ic15.rrc_evaluation_funcs import load_zip_file, get_tl_line_values_from_file_contents, decode_utf8
-from utils.visualize_detections import visualize_boxes_with_angles
+from utils.visualize_detections import visualize_polygons
+from utils.polygon_operations import polygon_from_points
 
 do_visualization = True
 using_detections = [
@@ -11,17 +16,17 @@ using_detections = [
 ]
 
 allDetFilePaths = {
-    'craft_015_weighted': './res_craft_ic15/res_craft_ic15_015_weighted_rect.zip',
-    'psenet_015': './res_psenet_ic15/res_psenet_ic15_015_rect.zip',
-    'charnet_015': './res_charnet_ic15/res_charnet_ic15_015_rect.zip'
+    'craft_015_weighted': './res_craft_ic15/res_craft_ic15_015_weighted.zip',
+    'psenet_015': './res_psenet_ic15/res_psenet_ic15_015.zip',
+    'charnet_015': './res_charnet_ic15/res_charnet_ic15_015.zip'
 }
-gtFilePath = './gt_ic15/gt_ic15_rect.zip'
-result_name = 'res_text_alfa_ic15_' + '_'.join(using_detections) + '_rect'
+gtFilePath = './gt_ic15/gt_ic15.zip'
+result_name = 'res_text_alfa_polygon_ic15_' + '_'.join(using_detections)
 
 
 if __name__ == '__main__':
     text_alfa = TextALFA()
-    evalParams = box_with_angle_evaluation_params()
+    evalParams = polygon_evaluation_params()
     for key in using_detections:
         validate_data(allDetFilePaths[key], evalParams, isGT=False)
     subm_dict = {}
@@ -39,56 +44,53 @@ if __name__ == '__main__':
     joined_subm_dict = {}
     for img_key in img_keys:
         gtFile = decode_utf8(gt[img_key])
-        gtBoxes = []
-        gtAngles = []
+        gtPols = []
         gtConfs = []
         gtDontCare = []
-        pointsList, anglesList, _, transcriptionsList = get_tl_line_values_from_file_contents(gtFile, evalParams, True,
+        pointsList, _, _, transcriptionsList = get_tl_line_values_from_file_contents(gtFile, evalParams, True,
                                                                                               False)
         for i in range(len(pointsList)):
             transcription = transcriptionsList[i]
             dontCare = transcription == "###"
             gtDontCare.append(dontCare)
-            gtBoxes.append(pointsList[i])
-            gtAngles.append(anglesList[i])
+            points = pointsList[i]
+            gtPol = polygon_from_points(points)
+            gtPols.append(gtPol)
             gtConfs.append(1.0)
         if do_visualization:
-            img = visualize_boxes_with_angles(img_key, gtConfs, gtBoxes, gtAngles, gtDontCare, 'gt')
-        joined_img_boxes = {}
-        joined_img_angles = {}
+            img = visualize_polygons(img_key, gtConfs, gtPols, gtDontCare, 'gt')
+        joined_img_polygons = {}
         joined_img_confs = {}
         for j in range(len(detector_keys)):
             detector_key = detector_keys[j]
             detFile = subm_dict[detector_key][img_key]
-            pointsList, anglesList, confidencesList, _ = get_tl_line_values_from_file_contents(detFile, evalParams,
+            pointsList, _, confidencesList, _ = get_tl_line_values_from_file_contents(detFile, evalParams,
                                                                                      False, evalParams['CONFIDENCES'])
-            joined_img_boxes[detector_key] = pointsList
-            joined_img_angles[detector_key] = anglesList
-            joined_img_confs[detector_key] = confidencesList
+            detPols = []
+            for i in range(len(pointsList)):
+                points = pointsList[i]
+                detPol = polygon_from_points(points)
+                detPols.append(detPol)
+            joined_img_polygons[detector_keys[j]] = detPols
+            joined_img_confs[detector_keys[j]] = confidencesList
             if do_visualization:
-                show = False
-                if (j + 1) == len(detector_keys):
-                    show = True
-                visualize_boxes_with_angles(img_key, confidencesList, pointsList, anglesList, [False] * len(pointsList),
-                                            detector_key, show=show)
-        # new_img_boxes, new_img_angles, new_img_confs = text_alfa.TextALFA_result(detector_keys, joined_img_boxes,
-        #                                                         joined_img_angles, joined_img_confs, tau=0.1, gamma=0.5,
-        #                                                         bounding_box_fusion_method='WEIGHTED AVERAGE',
-        #                                                         scores_fusion_method='AVERAGE',
-        #                                                         add_empty_detections=True,
-        #                                                         empty_epsilon=0.1, use_angle=False,
-        #                                                         max_1_box_per_detector=True)
-        # if do_visualization:
-        #     visualize_boxes_with_angles(img_key, new_img_confs, new_img_boxes, new_img_angles,
-        #                                 [False] * len(new_img_confs), 'text_alfa', img, show=True)
-        # joined_subm_dict[img_key] = new_img_boxes, new_img_angles, new_img_confs
-    # zip_filename = os.path.join('./res_text_alfa_ic15', result_name + '.zip')
-    # with ZipFile(zip_filename, 'w') as zipped_f:
-    #     for img_key in img_keys:
-    #         new_img_boxes, new_img_angles, new_img_confs = joined_subm_dict[img_key]
-    #         output_filename = 'res_img_%s.txt' % img_key
-    #         zipped_f.writestr(output_filename,
-    #                           '\n'.join([','.join(
-    #                               list(np.reshape(new_img_boxes[i], -1).astype('int32').astype('string')) +
-    #                               [str(new_img_angles[i])] +
-    #                               [str(new_img_confs[i])]) for i in range(len(new_img_confs))]))
+                visualize_polygons(img_key, confidencesList, pointsList, [False] * len(pointsList), detector_key)
+        new_img_polygon, new_img_angles, new_img_confs = text_alfa.TextALFA_result(detector_keys, joined_img_polygons,
+                                                                joined_img_confs, tau=0.1, gamma=0.5,
+                                                                bounding_box_fusion_method='WEIGHTED AVERAGE',
+                                                                scores_fusion_method='AVERAGE',
+                                                                add_empty_detections=True,
+                                                                empty_epsilon=0.1, use_angle=False,
+                                                                max_1_box_per_detector=True)
+        if do_visualization:
+            visualize_polygons(img_key, new_img_confs, new_img_polygon,
+                                        [False] * len(new_img_confs), 'text_alfa', img, show=True)
+        joined_subm_dict[img_key] = new_img_polygon, new_img_confs
+    zip_filename = os.path.join('./res_text_alfa_polygon_ic15', result_name + '.zip')
+    with ZipFile(zip_filename, 'w') as zipped_f:
+        for img_key in img_keys:
+            new_img_confs, new_img_polygons = joined_subm_dict[img_key]
+            output_filename = 'res_img_%s.txt' % img_key
+            zipped_f.writestr(output_filename,
+                '\n'.join([','.join(list(np.reshape(new_img_polygons[i][0], -1).astype('int32').astype('string')) +
+                                    [str(new_img_confs[i])]) for i in range(len(new_img_confs))]))

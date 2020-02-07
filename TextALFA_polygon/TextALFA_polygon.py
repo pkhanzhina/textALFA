@@ -1,8 +1,8 @@
 # (c) Evgeny Razinkov, Kazan Federal University, 2017
 import numpy as np
 
-from NMS.NMS_bbox import bbox_NMS
-from TextALFA_bbox import clustering_bbox as bbox_clustering
+from NMS.NMS_polygon import NMS_polygon
+from TextALFA_polygon import clustering_polygon as bbox_clustering
 
 
 class Object:
@@ -124,9 +124,9 @@ class TextALFA:
         self.bc = bbox_clustering.BoxClustering()
 
 
-    def TextALFA_result(self, all_detectors_names, detectors_bounding_boxes, detectors_bounding_boxes_angles,
-                    detectors_scores, tau, gamma, bounding_box_fusion_method, scores_fusion_method,
-                    add_empty_detections, empty_epsilon, use_angle, max_1_box_per_detector):
+    def TextALFA_result(self, all_detectors_names, detectors_polygons, detectors_scores, tau, gamma,
+                        bounding_box_fusion_method, scores_fusion_method, add_empty_detections, empty_epsilon,
+                        use_angle, max_1_box_per_detector):
         """
         TextALFA algorithm
 
@@ -135,32 +135,17 @@ class TextALFA:
             Detectors names, that sholud have taken or have taken part in fusion. For e.g. ['ssd', 'denet', 'frcnn']
             even if 'ssd' didn't detect object.
 
-        detectors_bounding_boxes : dict
-            Dictionary, where keys are detector's names and values are numpy arrays of detector's bounding boxes.
+        detectors_polygons : dict
+            Dictionary, where keys are detector's names and values are numpy arrays of detector's polygons.
 
             Example: {
-            'craft': [[10, 28, 128, 250],
+            'craft': [[101, 254, 458, 255, 457, 658, 102, 658],
                     ...
-                    [55, 120, 506, 709]],
+                    [55, 21, 104, 25, 104, 396, 56, 397]],
             ...
-            'charnet': [[55, 169, 350, 790],
+            'charnet': [[201, 354, 468, 355, 467, 750, 202, 748],
                       ...
-                      [20, 19, 890, 620]],
-            }
-
-
-        detectors_bounding_boxes_angles : dict
-            Dictionary, where keys are detector's names and values are numpy arrays of detector's bounding boxes angles
-            in radians.
-
-            Example: {
-            'craft': [3.14,
-                    ...
-                    1.57],
-            ...
-            'charnet': [1.04,
-                      ...
-                      0.52],
+                      [553, 210, 678, 205, 670, 400, 550, 405]],
             }
 
 
@@ -215,31 +200,28 @@ class TextALFA:
             Scores result of TextALFA
         """
 
-        objects_detector_names, objects_boxes, objects_angles, objects_scores = \
-            self.bc.get_raw_candidate_objects(detectors_bounding_boxes, detectors_bounding_boxes_angles,
-                                              detectors_scores, tau, gamma, use_angle, max_1_box_per_detector)
+        objects_detector_names, objects_polygons, objects_scores = \
+            self.bc.get_raw_candidate_objects(detectors_polygons, detectors_scores, tau, gamma, use_angle,
+                                              max_1_box_per_detector)
 
         objects = []
-        for i in range(0, len(objects_boxes)):
-            objects.append(Object(all_detectors_names, objects_detector_names[i], objects_boxes[i], objects_angles[i],
+        for i in range(0, len(objects_polygons)):
+            objects.append(Object(all_detectors_names, objects_detector_names[i], objects_polygons[i],
                        objects_scores[i], bounding_box_fusion_method, scores_fusion_method, add_empty_detections,
                                   empty_epsilon))
 
-        bounding_boxes = []
-        angles = []
+        polygons = []
         scores = []
         for detected_object in objects:
-            object_bounding_box, object_angle, object_scores = \
+            object_polygon, object_score = \
                 detected_object.get_object()
-            if object_bounding_box is not None:
-                bounding_boxes.append(object_bounding_box)
-                angles.append(object_angle)
-                scores.append(object_scores)
-        bounding_boxes = np.array(bounding_boxes)
-        angles = np.array(angles)
+            if object_polygon is not None:
+                polygons.append(object_polygon)
+                scores.append(object_score)
+        polygons = np.array(polygons)
         scores = np.array(scores)
 
-        bounding_boxes, angles, scores = bbox_NMS(scores, bounding_boxes, angles, angle_threshold=2 * np.pi)
+        bounding_boxes, angles, scores = NMS_polygon(scores, polygons)
         return bounding_boxes, angles, scores
 
 

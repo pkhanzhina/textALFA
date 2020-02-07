@@ -1,9 +1,14 @@
+import os
+from zipfile import ZipFile
+import numpy as np
+
 from eval_script_ic15.eval_script import polygon_evaluation_params, validate_data
 from eval_script_ic15.rrc_evaluation_funcs import load_zip_file, get_tl_line_values_from_file_contents, decode_utf8
 from utils.polygon_operations import polygon_from_points
 from utils.visualize_detections import visualize_polygons
+from NMS.NMS_polygon import NMS_polygon
 
-do_visualization = True
+do_visualization = False
 using_detections = [
     'psenet_015',
     'craft_015_weighted',
@@ -70,16 +75,16 @@ if __name__ == '__main__':
                 if (j + 1) == len(detector_keys):
                     show = True
                 visualize_polygons(img_key, confidencesList, detPols, [False] * len(detPols), detector_key, img, show=show)
-    #     new_img_confs, new_img_polygons = polygons_NMS(joined_img_confs, joined_img_polygons)
-    #     if do_visualization:
-    #         visualize_polygons(img_key, new_img_confs, new_img_polygons, [False] * len(new_img_confs), 'nms', img,
-    #                            show=True)
-    #     joined_subm_dict[img_key] = (new_img_confs, new_img_polygons)
-    # zip_filename = os.path.join('./res_nms_ic15', result_name + '.zip')
-    # with ZipFile(zip_filename, 'w') as zipped_f:
-    #     for img_key in img_keys:
-    #         new_img_confs, new_img_polygons = joined_subm_dict[img_key]
-    #         output_filename = 'res_img_%s.txt' % img_key
-    #         zipped_f.writestr(output_filename,
-    #             '\n'.join([','.join(list(np.reshape(new_img_polygons[i][0], -1).astype('int32').astype('string')) +
-    #                                 [str(new_img_confs[i])]) for i in range(len(new_img_confs))]))
+        new_img_confs, new_img_polygons = NMS_polygon(joined_img_confs, joined_img_polygons)
+        if do_visualization:
+            visualize_polygons(img_key, new_img_confs, new_img_polygons, [False] * len(new_img_confs), 'nms', img,
+                               show=True)
+        joined_subm_dict[img_key] = (new_img_confs, new_img_polygons)
+    zip_filename = os.path.join('./res_nms_ic15', result_name + '.zip')
+    with ZipFile(zip_filename, 'w') as zipped_f:
+        for img_key in img_keys:
+            new_img_confs, new_img_polygons = joined_subm_dict[img_key]
+            output_filename = 'res_img_%s.txt' % img_key
+            zipped_f.writestr(output_filename,
+                '\n'.join([','.join(list(np.reshape(new_img_polygons[i][0], -1).astype('int32').astype('string')) +
+                                    [str(new_img_confs[i])]) for i in range(len(new_img_confs))]))

@@ -1,7 +1,7 @@
 # (c) Evgeny Razinkov, Kazan Federal University, 2017
 import numpy as np
 
-from NMS.NMS_bbox import bbox_NMS
+from NMS.NMS_bbox import NMS_bbox
 from TextALFA_bbox import clustering_bbox as bbox_clustering
 
 
@@ -229,17 +229,17 @@ class TextALFA:
         angles = []
         scores = []
         for detected_object in objects:
-            object_bounding_box, object_angle, object_scores = \
+            object_bounding_box, object_angle, object_score = \
                 detected_object.get_object()
             if object_bounding_box is not None:
                 bounding_boxes.append(object_bounding_box)
                 angles.append(object_angle)
-                scores.append(object_scores)
+                scores.append(object_score)
         bounding_boxes = np.array(bounding_boxes)
         angles = np.array(angles)
         scores = np.array(scores)
 
-        bounding_boxes, angles, scores = bbox_NMS(scores, bounding_boxes, angles, angle_threshold=2 * np.pi)
+        bounding_boxes, angles, scores = NMS_bbox(scores, bounding_boxes, angles, angle_threshold=2 * np.pi)
         return bounding_boxes, angles, scores
 
 
