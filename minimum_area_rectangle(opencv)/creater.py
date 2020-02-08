@@ -15,7 +15,7 @@ allDetFilePaths = {
     'charnet_ic15_015': '../res_charnet_ic15/res_charnet_ic15_015.zip',
     'gt_ic15': '../gt_ic15/gt_ic15.zip'
 }
-detector = using_detections[3]
+detector = using_detections[0]
 
 z_name = allDetFilePaths[detector]
 if detector != 'gt_ic15':

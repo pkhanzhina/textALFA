@@ -2,7 +2,7 @@
 import numpy as np
 
 from NMS.NMS_bbox import NMS_bbox
-from TextALFA_bbox import clustering_bbox as bbox_clustering
+import clustering_bbox as bbox_clustering
 
 
 class Object:

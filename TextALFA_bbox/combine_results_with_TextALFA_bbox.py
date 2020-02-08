@@ -7,7 +7,7 @@ from eval_script_ic15.eval_script import box_with_angle_evaluation_params, valid
 from eval_script_ic15.rrc_evaluation_funcs import load_zip_file, get_tl_line_values_from_file_contents, decode_utf8
 from utils.visualize_detections import visualize_boxes_with_angles
 
-do_visualization = True
+do_visualization = False
 using_detections = [
     'psenet_015',
     'craft_015_weighted',
@@ -15,12 +15,12 @@ using_detections = [
 ]
 
 allDetFilePaths = {
-    'craft_015_weighted': './res_craft_ic15/res_craft_ic15_015_weighted_rect.zip',
-    'psenet_015': './res_psenet_ic15/res_psenet_ic15_015_rect.zip',
-    'charnet_015': './res_charnet_ic15/res_charnet_ic15_015_rect.zip'
+    'craft_015_weighted': './res_craft_ic15/res_craft_ic15_015_weighted_rect2.zip',
+    'psenet_015': './res_psenet_ic15/res_psenet_ic15_015_rect2.zip',
+    'charnet_015': './res_charnet_ic15/res_charnet_ic15_015_rect2.zip'
 }
-gtFilePath = './gt_ic15/gt_ic15_rect.zip'
-result_name = 'res_text_alfa_bbox_ic15_' + '_'.join(using_detections) + '_rect'
+gtFilePath = './gt_ic15/gt_ic15_rect2.zip'
+result_name = 'res_text_alfa_bbox_ic15_' + '_'.join(using_detections) + '_rect2'
 
 
 if __name__ == '__main__':

@@ -31,11 +31,11 @@ def visualize_polygons(img_key, confs, polygons, dontCare, method, img=None, sho
                              edgecolor=color,
                              linewidth=2.0)
         plt.gca().add_patch(rect)
-        # if method != 'gt':
-        #     plt.gca().text(polygon[0][0], polygon[0][1],
-        #                    '{:.2f} | {:s}'.format(conf, method),
-        #                    bbox=dict(facecolor=color, alpha=0.5),
-        #                    fontsize=12, color='white')
+        if method != 'gt':
+            plt.gca().text(polygon[0][0], polygon[0][1],
+                           '{:.2f} | {:s}'.format(conf, method),
+                           bbox=dict(facecolor=color, alpha=0.5),
+                           fontsize=12, color='white')
     if show:
         plt.show()
         plt.clf()
