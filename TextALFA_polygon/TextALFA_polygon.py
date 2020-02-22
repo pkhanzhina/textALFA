@@ -1,12 +1,15 @@
 # (c) Evgeny Razinkov, Kazan Federal University, 2017
 import numpy as np
+from itertools import combinations
+import cv2 as cv
 
 from NMS.NMS_polygon import NMS_polygon
-from TextALFA_polygon import clustering_polygon as bbox_clustering
+import clustering_polygon as polygon_clustering
+from utils.polygon_operations import polygon_from_points, rectangle_to_polygon
 
 
 class Object:
-    def __init__(self, all_detectors_names, detectors_names, bounding_boxes, angles, scores, bounding_box_fusion_method,
+    def __init__(self, all_detectors_names, detectors_names, polygons, scores, bounding_box_fusion_method,
                  scores_fusion_method, add_empty_detections, empty_epsilon):
         self.bounding_box_fusion_method = bounding_box_fusion_method
         self.scores_fusion_method = scores_fusion_method
@@ -14,57 +17,41 @@ class Object:
         self.empty_epsilon = empty_epsilon
         self.detectors_names = all_detectors_names
         self.detected_by = detectors_names
-        self.bounding_boxes = bounding_boxes
-        self.angles = angles
+        self.polygons = polygons
         self.scores = list(scores)
         self.epsilon = 0.0
         self.finalized = False
 
 
-    def max_bounding_box(self):
-        lx = np.amin(self.np_bounding_boxes[:, 0])
-        ly = np.amin(self.np_bounding_boxes[:, 1])
-        rx = np.amax(self.np_bounding_boxes[:, 2])
-        ry = np.amax(self.np_bounding_boxes[:, 3])
-        return np.array([lx, ly, rx, ry])
+    def weighted_average(self):
+        res = np.zeros((0, 8))
+        for i in range(len(self.polygons)):
+            array = [np.array(self.polygons[i])[0].reshape(-1) * self.np_scores[i]]
+            res = np.concatenate((res, array))
+        res = np.average(res, axis=0)
+        res = polygon_from_points(res)
+        return res
 
 
-    def min_bounding_box(self):
-        lx = np.amax(self.np_bounding_boxes[:, 0])
-        ly = np.amax(self.np_bounding_boxes[:, 1])
-        rx = np.amin(self.np_bounding_boxes[:, 2])
-        ry = np.amin(self.np_bounding_boxes[:, 3])
-        return np.array([lx, ly, rx, ry])
+    def intersection(self):
+        pInt = self.polygons[0]
+        for i in range(1, len(self.polygons)):
+            pInt = pInt & self.polygons[i]
+        points = np.array(pInt, dtype=np.int32)[0]
+        rect = cv.minAreaRect(points)
+        rect = cv.boxPoints(rect)
+        points = np.int0(rect).flatten()
+        polygon = polygon_from_points(points)
+        return polygon
 
 
-    def average_bounding_box(self):
-        bounding_box = np.average(self.np_bounding_boxes, axis=0)
-        return bounding_box
 
-
-    def weighted_average_bounding_box(self):
-        bounding_box = np.average(self.np_bounding_boxes, axis=0, weights=self.np_scores[:len(self.np_bounding_boxes)])
-        return bounding_box
-
-
-    def get_final_bounding_box(self):
-        if self.bounding_box_fusion_method == 'MAX':
-            return self.max_bounding_box()
-        elif self.bounding_box_fusion_method == 'MIN':
-            return self.min_bounding_box()
-        elif self.bounding_box_fusion_method == 'AVERAGE':
-            return self.average_bounding_box()
-        elif self.bounding_box_fusion_method == 'WEIGHTED AVERAGE':
-            return self.weighted_average_bounding_box()
-        elif self.bounding_box_fusion_method == 'MOST CONFIDENT':
-            return self.np_bounding_boxes[np.argmax(self.np_scores)]
+    def get_final_polygon(self):
+        if self.bounding_box_fusion_method == 'INTERSECTION':
+            return self.intersection()
         else:
-            print('Unknown value for bounding_box_fusion_method ' + self.bounding_box_fusion_method + '. Using AVERAGE')
-            return self.average_bounding_box()
-
-
-    def get_final_angle(self):
-        return np.average(self.angles)
+            print('Unknown value for bounding_box_fusion_method ' + self.bounding_box_fusion_method + '. Using INTERSECTION')
+            return self.intersection()
 
 
     def average_scores(self):
@@ -95,9 +82,6 @@ class Object:
             if detector not in self.detected_by:
                 self.detected_by_all = False
                 self.scores.append(self.empty_epsilon)
-        self.np_bounding_boxes = np.array(self.bounding_boxes)
-        self.np_bounding_boxes = np.reshape(self.np_bounding_boxes,
-                                            (len(self.bounding_boxes), len(self.bounding_boxes[0])))
         self.np_scores = np.array(self.scores)
         self.finalized = True
 
@@ -110,10 +94,9 @@ class Object:
                 self.effective_scores = len(self.np_scores)
             else:
                 self.effective_scores = len(self.detected_by)
-            self.final_bounding_box = self.get_final_bounding_box()
-            self.final_angle = self.get_final_angle()
+            self.final_polygon = self.get_final_polygon()
             self.final_score = self.get_final_score()
-            return self.final_bounding_box, self.final_angle, self.final_score
+            return self.final_polygon, self.final_score
         else:
             print('Zero objects, mate!')
         return None, None, None
@@ -121,12 +104,12 @@ class Object:
 
 class TextALFA:
     def __init__(self):
-        self.bc = bbox_clustering.BoxClustering()
+        self.bc = polygon_clustering.PolygonClustering()
 
 
     def TextALFA_result(self, all_detectors_names, detectors_polygons, detectors_scores, tau, gamma,
                         bounding_box_fusion_method, scores_fusion_method, add_empty_detections, empty_epsilon,
-                        use_angle, max_1_box_per_detector):
+                        max_1_box_per_detector):
         """
         TextALFA algorithm
 
@@ -183,10 +166,6 @@ class TextALFA:
         empty_epsilon : float
             Parameter epsilon in the paper, between [0.0, 1.0]
 
-        use_angle : boolean
-            True - cos of angle diff and Jaccard coefficient will be used to compute detections similarity score
-            False - only Jaccard coefficient will be used to compute detections similarity score
-
         max_1_box_per_detector : boolean
             True - only one detection form detector could be added to cluster
             False - multiple detections from same detector could be added to cluster
@@ -201,7 +180,7 @@ class TextALFA:
         """
 
         objects_detector_names, objects_polygons, objects_scores = \
-            self.bc.get_raw_candidate_objects(detectors_polygons, detectors_scores, tau, gamma, use_angle,
+            self.bc.get_raw_candidate_objects(detectors_polygons, detectors_scores, tau, gamma,
                                               max_1_box_per_detector)
 
         objects = []
@@ -221,7 +200,7 @@ class TextALFA:
         polygons = np.array(polygons)
         scores = np.array(scores)
 
-        bounding_boxes, angles, scores = NMS_polygon(scores, polygons)
-        return bounding_boxes, angles, scores
+        scores, polygons = NMS_polygon(scores, polygons)
+        return polygons, scores
 
 

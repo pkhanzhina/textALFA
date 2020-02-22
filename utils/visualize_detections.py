@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from PIL import Image
 import os
+import numpy as np
 
 
 images_root_dir = '../ICDAR2015/ch4_test_images'
@@ -22,14 +23,13 @@ def visualize_polygons(img_key, confs, polygons, dontCare, method, img=None, sho
     plt.axis('off')
     for i in range(len(confs)):
         conf = confs[i]
-        polygon = polygons[i][0]
+        polygon = np.array(polygons[i])[0]
+        print(polygon)
         color = colors[method]
         if dontCare[i]:
             color = colors['dontCare']
         color = (color[0] / 255., color[1] / 255., color[2] / 255.)
-        rect = plt.Polygon(polygon, fill=False,
-                             edgecolor=color,
-                             linewidth=2.0)
+        rect = plt.Polygon(polygon, fill=False, edgecolor=color, linewidth=2.0)
         plt.gca().add_patch(rect)
         if method != 'gt':
             plt.gca().text(polygon[0][0], polygon[0][1],

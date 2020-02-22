@@ -8,7 +8,7 @@ from utils.polygon_operations import polygon_from_points
 from utils.visualize_detections import visualize_polygons
 from NMS.NMS_polygon import NMS_polygon
 
-do_visualization = False
+do_visualization = True
 using_detections = [
     'psenet_015',
     'craft_015_weighted',

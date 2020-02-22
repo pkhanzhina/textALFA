@@ -1,21 +1,17 @@
 # (c) Evgeny Razinkov, Kazan Federal University, 2017
 
 import numpy as np
+from utils.polygon_operations import get_intersection_over_union
 
-
-def fastIoU(boxes):
-    number_of_boxes = len(boxes)
-    m0 = np.zeros((number_of_boxes, number_of_boxes, 4))
-    m0[:] = boxes
-    m0T = np.transpose(m0, axes = (1, 0, 2))
-    m_up_left = np.maximum(m0[:, :, :2], m0T[:, :, :2])
-    m_down_right = np.minimum(m0[:, :, 2:], m0T[:, :, 2:])
-    m_diff = np.clip(m_down_right - m_up_left, a_min = 0.0, a_max=None)
-    m_intersection = m_diff[:, :, 0] * m_diff[:, :, 1]
-    m_area = (m0[:, :, 2] - m0[:, :, 0]) * (m0[:, :, 3] - m0[:, :, 1])
-    m_T_area = (m0T[:, :, 2] - m0T[:, :, 0]) * (m0T[:, :, 3] - m0T[:, :, 1])
-    iou = m_intersection / (m_area + m_T_area - m_intersection)
-    return iou
+def fastIoU(polygons):
+    number_of_boxes = len(polygons)
+    iou_matrix = np.eye(number_of_boxes)
+    for i in range(0, number_of_boxes):
+        for j in range(i + 1, number_of_boxes):
+            iou = get_intersection_over_union(polygons[i], polygons[j])
+            iou_matrix[i][j] = iou
+            iou_matrix[j][i] = iou
+    return iou_matrix
 
 
 def fastDiff(detector_indices):
@@ -37,18 +33,15 @@ def fastAngleSame(angles):
     return a_sim
 
 
-class BoxClustering:
+class PolygonClustering:
     def __init__(self):
         pass
 
     def prepare_matrix(self):
-        self.sim_matrix = fastIoU(self.boxes)
+        self.sim_matrix = fastIoU(self.polygons)
         if self.max_1_box_per_detector:
             s_diff = fastDiff(self.names)
             self.sim_matrix = self.sim_matrix * (s_diff + np.eye(self.n_boxes))
-        if self.use_angle:
-            a_sim = fastAngleSame(self.angles)
-            self.sim_matrix = np.power(self.sim_matrix, self.power_iou) * np.power(a_sim, 1.0 - self.power_iou)
         self.path_matrix = np.greater_equal(self.sim_matrix, self.hard_threshold).astype(int)
 
 
@@ -117,36 +110,22 @@ class BoxClustering:
         return min_sim
 
 
-    def get_raw_candidate_objects(self, bounding_boxes, angles, scores, tau, gamma, use_angle, max_1_box_per_detector):
+    def get_raw_candidate_objects(self, polygons, scores, tau, gamma, max_1_box_per_detector):
         """
         Clusters detections from different detectors.
 
         ----------
-        bounding_boxes : dict
-            Dictionary, where keys are detector's names and values are numpy arrays of detector's bounding boxes.
+        polygons : dict
+            Dictionary, where keys are detector's names and values are numpy arrays of detector's polygons.
 
             Example: {
-            'craft': [[10, 28, 128, 250],
+            'craft': [[101, 254, 458, 255, 457, 658, 102, 658],
                     ...
-                    [55, 120, 506, 709]],
+                    [55, 21, 104, 25, 104, 396, 56, 397]],
             ...
-            'charnet': [[55, 169, 350, 790],
+            'charnet': [[201, 354, 468, 355, 467, 750, 202, 748],
                       ...
-                      [20, 19, 890, 620]],
-            }
-
-        angles : dict
-            Dictionary, where keys are detector's names and values are numpy arrays of detector's bounding boxes angles
-            in radians.
-
-            Example: {
-            'craft': [3.14,
-                    ...
-                    1.57],
-            ...
-            'charnet': [1.04,
-                      ...
-                      0.52],
+                      [553, 210, 678, 205, 670, 400, 550, 405]],
             }
 
         scores : dict
@@ -173,10 +152,6 @@ class BoxClustering:
             True - only detections with same class label will be added into same cluster
             False - detections labels won't be taken into account while clustering
 
-        use_angle : boolean
-            True - cos of angle diff and Jaccard coefficient will be used to compute detections similarity score
-            False - only Jaccard coefficient will be used to compute detections similarity score
-
         max_1_box_per_detector : boolean
             True - only one detection form detector could be added to cluster
             False - multiple detections from same detector could be added to cluster
@@ -199,27 +174,24 @@ class BoxClustering:
 
         self.hard_threshold = tau
         self.power_iou = gamma
-        self.use_angle = use_angle
         self.max_1_box_per_detector = max_1_box_per_detector
 
-        self.detector_names = list(bounding_boxes.keys())
+        self.detector_names = list(polygons.keys())
 
         self.n_boxes = 0
         self.names = np.zeros(0)
-        self.boxes = np.zeros((0, 4))
-        self.angles = np.zeros(0)
+        self.polygons = []
         self.scores = np.zeros(0)
 
         detector_index = 0
         self.actual_names = []
         for detector_name in self.detector_names:
-            detector_boxes = len(bounding_boxes[detector_name])
+            detector_boxes = len(polygons[detector_name])
             if detector_boxes > 0:
                 self.n_boxes += detector_boxes
-                self.boxes = np.vstack((self.boxes, bounding_boxes[detector_name]))
+                self.polygons.extend(polygons[detector_name])
                 self.actual_names += [detector_name] * detector_boxes
                 self.names = np.hstack((self.names, np.ones(detector_boxes) * detector_index))
-                self.angles = np.hstack((self.angles, angles[detector_name]))
                 self.scores = np.hstack((self.scores, scores[detector_name]))
             detector_index += 1
 
@@ -228,12 +200,9 @@ class BoxClustering:
         self.get_paths()
 
         objects_detector_names = []
-        objects_boxes = []
+        objects_polygons = []
         objects_scores = []
-        objects_angles = []
         np_detectors = np.array(self.actual_names)
-        np_boxes = np.array(self.boxes)
-        np_angles = np.array(self.angles)
         np_scores = np.array(self.scores)
         if len(self.whole_path_matrix):
             unique_whole_path_matrix = np.vstack({tuple(row) for row in self.whole_path_matrix})
@@ -243,9 +212,8 @@ class BoxClustering:
                     clusters = self.cluster_indices(list(indices))
                     for c in clusters:
                         objects_detector_names.append(list(np_detectors[c]))
-                        objects_boxes.append(np_boxes[c])
-                        objects_angles.append(np_angles[c])
+                        objects_polygons.append([self.polygons[idx] for idx in c])
                         objects_scores.append(np_scores[c])
 
-        return objects_detector_names, objects_boxes, objects_angles, objects_scores
+        return objects_detector_names, objects_polygons, objects_scores
 
