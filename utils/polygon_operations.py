@@ -54,4 +54,7 @@ def get_union(pD, pG):
 
 
 def get_intersection_over_union(pD, pG):
-    return get_intersection(pD, pG) / get_union(pD, pG)
+    try:
+        return get_intersection(pD, pG) / get_union(pD, pG)
+    except:
+        return 0.0

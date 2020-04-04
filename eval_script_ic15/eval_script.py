@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from collections import namedtuple
-import numpy as np
 
 import eval_script_ic15.rrc_evaluation_funcs as rrc_evaluation_funcs
-from polygon_operations import *
+from utils.polygon_operations import *
 
 
 def polygon_evaluation_params():
@@ -35,7 +34,7 @@ def box_with_angle_evaluation_params():
         'ANGLE': True,  # Detections must include angle for bounding box
         'CONFIDENCES': True,  # Detections must include confidence value. AP will be calculated
         'PER_SAMPLE_RESULTS': True,  # Generate per sample results and produce data for visualization
-        'ANGLE_CONSTRAINT': np.pi / 8
+        'ANGLE_CONSTRAINT': 2 * np.pi
     }
 
 
@@ -197,7 +196,9 @@ def evaluate_method(gt, subm, evaluationParams):
                         pD = detPols[detNum]
                         iouMat[gtNum,detNum] = get_intersection_over_union(pD,pG)
                         if evaluationParams['ANGLE']:
-                            angleMat[gtNum, detNum] = np.abs(gtAngles[gtNum] - detAngles[detNum])
+                            angle_diff_1 = np.abs(gtAngles[gtNum] - detAngles[detNum])
+                            angle_diff_2 = 2 * np.pi - angle_diff_1
+                            angleMat[gtNum, detNum] = min(angle_diff_1, angle_diff_2)
 
                 for gtNum in range(len(gtPols)):
                     for detNum in range(len(detPols)):
@@ -280,16 +281,23 @@ def evaluate_method(gt, subm, evaluationParams):
 
 if __name__=='__main__':
     p = {
-        # 'g': '../gt_ic15/gt_ic15.zip',
-        'g': '../gt_ic15/gt_ic15_rect.zip',
-        # 's': '../res_craft_ic15/res_craft_ic15_015_weighted.zip'
-        # 's': '../res_psenet_ic15/res_psenet_ic15_015.zip'
-        # 's': '../res_charnet_ic15/res_charnet_ic15_015.zip'
-        # 's': '../res_nms_ic15/res_nms_ic15_craft_015_mean_psenet_015.zip'
-        # 's': '../res_nms_ic15/res_nms_ic15_craft_015_weighted_charnet_015.zip'
-        # 's': '../res_nms_ic15/res_nms_ic15_psenet_015_craft_015_weighted_charnet_015.zip'
-        's': '../res_text_alfa_ic15/res_text_alfa_ic15_psenet_015_craft_015_weighted_charnet_015_rect.zip'
+        'g': './gt_ic15/gt_ic15.zip',
+        # 'g': './gt_ic15/gt_ic15_rect.zip',
+        # 'g': './gt_ic15/gt_ic15_rect2.zip',
+        # 's': './res_craft_ic15/res_craft_ic15_015_weighted.zip'
+        # 's': './res_psenet_ic15/res_psenet_ic15_015.zip'
+        # 's': './res_charnet_ic15/res_charnet_ic15_015.zip'
+        # 's': './res_nms_ic15/res_nms_ic15_psenet_015_craft_015_weighted_charnet_015.zip'
+        # 's': './res_craft_ic15/res_craft_ic15_015_weighted_rect.zip',
+        # 's': './res_craft_ic15/res_craft_ic15_015_weighted_rect2.zip',
+        # 's': './res_psenet_ic15/res_psenet_ic15_015_rect.zip',
+        # 's': './res_psenet_ic15/res_psenet_ic15_015_rect2.zip',
+        # 's': './res_charnet_ic15/res_charnet_ic15_015_rect.zip',
+        # 's': './res_charnet_ic15/res_charnet_ic15_015_rect2.zip',
+        's': './res_text_alfa_polygon_ic15/res_text_alfa_polygon_ic15_psenet_015_craft_015_weighted_charnet_015.zip'
+        # 's': './res_text_alfa_bbox_ic15/res_text_alfa_bbox_ic15_psenet_015_craft_015_weighted_charnet_015_rect.zip'
+        # 's': './res_text_alfa_bbox_ic15/res_text_alfa_bbox_ic15_psenet_015_craft_015_weighted_charnet_015_rect2.zip'
     }
-    # evalParams = polygon_evaluation_params()
-    evalParams = box_with_angle_evaluation_params()
+    evalParams = polygon_evaluation_params()
+    # evalParams = box_with_angle_evaluation_params()
     rrc_evaluation_funcs.main_evaluation(p, evalParams, validate_data, evaluate_method)

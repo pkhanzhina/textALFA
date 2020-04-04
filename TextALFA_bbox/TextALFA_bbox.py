@@ -1,8 +1,8 @@
 # (c) Evgeny Razinkov, Kazan Federal University, 2017
 import numpy as np
 
-import bbox_clustering as bbox_clustering
-from bbox_NMS import bbox_NMS
+from NMS.NMS_bbox import NMS_bbox
+import clustering_bbox as bbox_clustering
 
 
 class Object:
@@ -126,7 +126,7 @@ class TextALFA:
 
     def TextALFA_result(self, all_detectors_names, detectors_bounding_boxes, detectors_bounding_boxes_angles,
                     detectors_scores, tau, gamma, bounding_box_fusion_method, scores_fusion_method,
-                    add_empty_detections, empty_epsilon, max_1_box_per_detector):
+                    add_empty_detections, empty_epsilon, use_angle, max_1_box_per_detector):
         """
         TextALFA algorithm
 
@@ -198,6 +198,10 @@ class TextALFA:
         empty_epsilon : float
             Parameter epsilon in the paper, between [0.0, 1.0]
 
+        use_angle : boolean
+            True - cos of angle diff and Jaccard coefficient will be used to compute detections similarity score
+            False - only Jaccard coefficient will be used to compute detections similarity score
+
         max_1_box_per_detector : boolean
             True - only one detection form detector could be added to cluster
             False - multiple detections from same detector could be added to cluster
@@ -213,7 +217,7 @@ class TextALFA:
 
         objects_detector_names, objects_boxes, objects_angles, objects_scores = \
             self.bc.get_raw_candidate_objects(detectors_bounding_boxes, detectors_bounding_boxes_angles,
-                                              detectors_scores, tau, gamma, max_1_box_per_detector)
+                                              detectors_scores, tau, gamma, use_angle, max_1_box_per_detector)
 
         objects = []
         for i in range(0, len(objects_boxes)):
@@ -225,17 +229,17 @@ class TextALFA:
         angles = []
         scores = []
         for detected_object in objects:
-            object_bounding_box, object_angle, object_scores = \
+            object_bounding_box, object_angle, object_score = \
                 detected_object.get_object()
             if object_bounding_box is not None:
                 bounding_boxes.append(object_bounding_box)
                 angles.append(object_angle)
-                scores.append(object_scores)
+                scores.append(object_score)
         bounding_boxes = np.array(bounding_boxes)
         angles = np.array(angles)
         scores = np.array(scores)
 
-        bounding_boxes, angles, scores = bbox_NMS(scores, bounding_boxes, angles)
+        bounding_boxes, angles, scores = NMS_bbox(scores, bounding_boxes, angles, angle_threshold=2 * np.pi)
         return bounding_boxes, angles, scores
 
 
