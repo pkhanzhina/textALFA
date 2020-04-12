@@ -111,6 +111,11 @@ if __name__ == '__main__':
         curves.update(data)
     plt.figure(figsize=(17, 10))
     for key in curves.keys():
+        curves[key]['recall'].insert(0, 0.0)
+        # curves[key]['precision'].insert(0, 1.0)
+        curves[key]['precision'].insert(0, max(curves[key]['precision']))
+        # curves[key]['recall'].append(1.0)cc
+        # curves[key]['precision'].append(curves[key]['precision'][-1])
         plt.plot(curves[key]['recall'], curves[key]['precision'], label=key)
         if curves[key]['operating_point'] is None:
             continue
