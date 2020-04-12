@@ -8,10 +8,10 @@ from eval_script_ic15.rrc_evaluation_funcs import load_zip_file, get_tl_line_val
 from utils.visualize_detections import visualize_polygons
 from utils.polygon_operations import polygon_from_points
 
-do_visualization = False
+do_visualization = True
 using_detections = [
-    'psenet_015',
-    'craft_015_weighted',
+    # 'psenet_015',
+    # 'craft_015_weighted',
     'charnet_015'
 ]
 
