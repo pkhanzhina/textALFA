@@ -1,5 +1,9 @@
 import Polygon as plg
+# from shapely.geometry import Polygon
 import numpy as np
+from imutils import perspective
+from scipy.spatial import ConvexHull
+
 
 def polygon_from_points(points):
     """
@@ -58,3 +62,29 @@ def get_intersection_over_union(pD, pG):
         return get_intersection(pD, pG) / get_union(pD, pG)
     except:
         return 0.0
+
+
+def order_coordinates(polygon):
+    points = np.array(polygon, dtype=np.int32)[0]
+    ordered = perspective.order_points(points)
+    return polygon_from_points((np.int0(ordered)).flatten())
+
+
+def get_convexhull(polygon):
+    points = np.array(polygon)[0]
+    hull = (ConvexHull(points=points))
+    points = points[hull.vertices]
+    return polygon_from_points((np.int0(points)).flatten())
+
+
+def order_points_new(polygon):
+    pts = np.array(polygon, dtype=np.int32)[0]
+    xSorted = pts[np.argsort(pts[:, 0]), :]
+    leftMost = xSorted[:2, :]
+    rightMost = xSorted[2:, :]
+    leftMost = leftMost[np.argsort(leftMost[:, 1]), :]
+    (tl, bl) = leftMost
+    rightMost = rightMost[np.argsort(rightMost[:, 1]), :]
+    (tr, br) = rightMost
+    ordered = np.array([tl, tr, br, bl], dtype="float32")
+    return polygon_from_points((np.int0(ordered)).flatten())

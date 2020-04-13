@@ -22,21 +22,22 @@ class Object:
         self.epsilon = 0.0
         self.finalized = False
 
-
     def weighted_average(self):
-        res = np.zeros((0, 8))
-        for i in range(len(self.polygons)):
-            array = [np.array(self.polygons[i])[0].reshape(-1) * self.np_scores[i]]
-            res = np.concatenate((res, array))
-        res = np.average(res, axis=0)
-        res = polygon_from_points(res)
-        return res
-
+        # for i in range(0, len(self.polygons)):
+        #     self.polygons[i] = order_coordinates(self.polygons[i])
+        points = np.asarray(self.polygons, dtype=np.int32)
+        average_polygon = np.int0(np.average(points, axis=0, weights=self.np_scores[:len(self.polygons)])).flatten()
+        return polygon_from_points(average_polygon)
 
     def intersection(self):
+        # for i in range(0, len(self.polygons)):
+        #     self.polygons[i] = order_coordinates(self.polygons[i])
         pInt = self.polygons[0]
         for i in range(1, len(self.polygons)):
             pInt = pInt & self.polygons[i]
+        # if len(pInt) != 1:
+        #     pInt = pInt | self.polygons[np.argmax(self.np_scores[:len(self.polygons)])]
+        # pInt = order_coordinates(pInt)
         points = np.array(pInt, dtype=np.int32)[0]
         rect = cv.minAreaRect(points)
         rect = cv.boxPoints(rect)
@@ -44,37 +45,68 @@ class Object:
         polygon = polygon_from_points(points)
         return polygon
 
+    def most_confident_polygon(self):
+        # for i in range(0, len(self.polygons)):
+        #     self.polygons[i] = order_coordinates(self.polygons[i])
+        most_confident = np.argmax(np.asarray(self.scores[:len(self.polygons)]))
+        return self.polygons[most_confident]
 
+    def average_polygon(self):
+        # for i in range(0, len(self.polygons)):
+        #     self.polygons[i] = order_coordinates(self.polygons[i])
+        points = np.asarray(self.polygons, dtype=np.int32)
+        average_polygon = np.int0(np.average(points, axis=0)).flatten()
+        return polygon_from_points(average_polygon)
+
+    def union(self):
+        # for i in range(0, len(self.polygons)):
+        #     self.polygons[i] = order_coordinates(self.polygons[i])
+        pInt = self.polygons[0]
+        for i in range(1, len(self.polygons)):
+            pInt = pInt | self.polygons[i]
+        points = np.array(pInt, dtype=np.int32)[0]
+        rect = cv.minAreaRect(points)
+        rect = cv.boxPoints(rect)
+        points = np.int0(rect).flatten()
+        polygon = polygon_from_points(points)
+        return polygon
 
     def get_final_polygon(self):
+        for i in range(0, len(self.polygons)):
+            self.polygons[i] = order_points_new(self.polygons[i])
+            # self.polygons[i] = order_coordinates(self.polygons[i])
+
         if self.bounding_box_fusion_method == 'INTERSECTION':
             return self.intersection()
+        elif self.bounding_box_fusion_method == 'AVERAGE':
+            return self.average_polygon()
+        elif self.bounding_box_fusion_method == 'MOST_CONFIDENT':
+            return self.most_confident_polygon()
+        elif self.bounding_box_fusion_method == 'WEIGHTED_AVERAGE':
+            return self.weighted_average()
+        elif self.bounding_box_fusion_method == 'UNION':
+            return self.union()
         else:
-            print('Unknown value for bounding_box_fusion_method ' + self.bounding_box_fusion_method + '. Using INTERSECTION')
+            print('Unknown value for bounding_box_fusion_method ' + self.bounding_box_fusion_method +
+                  '. Using INTERSECTION')
             return self.intersection()
 
-
     def average_scores(self):
-        return np.average(self.np_scores[:self.effective_scores], axis=0)
-
+        return round(np.average(self.np_scores[:self.effective_scores], axis=0), 3)
 
     def multiply_scores(self):
-        temp = np.concatenate([self.np_scores[:self.effective_scores], 1 - self.np_scores[:self.effective_scores]], axis=1)
-        temp = np.prod(np.clip(temp, a_min=self.epsilon, a_max=None), axis=0)
-        return (temp / np.sum(temp))[:, 0]
-
+        return round(np.prod(self.np_scores[:self.effective_scores]), 3)
 
     def get_final_score(self):
         if self.scores_fusion_method == 'AVERAGE':
             return self.average_scores()
         elif self.scores_fusion_method == 'MULTIPLY':
             return self.multiply_scores()
-        elif self.scores_fusion_method == 'MOST CONFIDENT':
-            return self.scores[np.argmax(self.scores)]
+        elif self.scores_fusion_method == 'MOST_CONFIDENT':
+            return max(self.scores[:self.effective_scores])
         else:
             print('Unknown value for class_scores_fusion_method ' + self.scores_fusion_method + '. Using AVERAGE')
             return self.average_scores()
-
 
     def finalize(self, detectors_names):
         self.detected_by_all = True
@@ -85,7 +117,6 @@ class Object:
         self.np_scores = np.array(self.scores)
         self.finalized = True
 
-
     def get_object(self):
         if not self.finalized:
             self.finalize(self.detectors_names)
@@ -95,6 +126,7 @@ class Object:
             else:
                 self.effective_scores = len(self.detected_by)
             self.final_polygon = self.get_final_polygon()
+            # self.final_polygon = get_convexhull(self.get_final_polygon())
             self.final_score = self.get_final_score()
             return self.final_polygon, self.final_score
         else:
@@ -105,7 +137,6 @@ class Object:
 class TextALFA:
     def __init__(self):
         self.bc = polygon_clustering.PolygonClustering()
-
 
     def TextALFA_result(self, all_detectors_names, detectors_polygons, detectors_scores, tau, gamma,
                         bounding_box_fusion_method, scores_fusion_method, add_empty_detections, empty_epsilon,
@@ -186,7 +217,8 @@ class TextALFA:
         objects = []
         for i in range(0, len(objects_polygons)):
             objects.append(Object(all_detectors_names, objects_detector_names[i], objects_polygons[i],
-                       objects_scores[i], bounding_box_fusion_method, scores_fusion_method, add_empty_detections,
+                                  objects_scores[i], bounding_box_fusion_method, scores_fusion_method,
+                                  add_empty_detections,
                                   empty_epsilon))
 
         polygons = []
@@ -202,5 +234,3 @@ class TextALFA:
 
         scores, polygons = NMS_polygon(scores, polygons)
         return polygons, scores
-
-
