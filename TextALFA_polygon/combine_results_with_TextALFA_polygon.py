@@ -8,10 +8,10 @@ from eval_script_ic15.rrc_evaluation_funcs import load_zip_file, get_tl_line_val
 from utils.visualize_detections import visualize_polygons
 from utils.polygon_operations import polygon_from_points
 
-do_visualization = True
+do_visualization = False
 using_detections = [
-    # 'psenet_015',
-    # 'craft_015_weighted',
+    'psenet_015',
+    'craft_015_weighted',
     'charnet_015'
 ]
 
@@ -91,5 +91,5 @@ if __name__ == '__main__':
             new_img_polygons, new_img_confs = joined_subm_dict[img_key]
             output_filename = 'res_img_%s.txt' % img_key
             zipped_f.writestr(output_filename,
-                '\n'.join([','.join(list(np.reshape(new_img_polygons[i][0], -1).astype('int32').astype('string')) +
+                '\n'.join([','.join(list(np.reshape(new_img_polygons[i][0], -1).astype('int32').astype('str')) +
                                     [str(new_img_confs[i])]) for i in range(len(new_img_confs))]))

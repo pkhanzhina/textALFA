@@ -5,7 +5,7 @@ import cv2 as cv
 
 from NMS.NMS_polygon import NMS_polygon
 import clustering_polygon as polygon_clustering
-from utils.polygon_operations import polygon_from_points, rectangle_to_polygon
+from utils.polygon_operations import polygon_from_points, rectangle_to_polygon, order_points_new
 
 
 class Object:
