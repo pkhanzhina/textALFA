@@ -4,24 +4,11 @@ from utils.polygon_operations import polygon_from_points
 from eval_script_ic15.eval_script import polygon_evaluation_params
 
 
-def validate_TextALFA(test_index, gt, detector_keys, subm_dict, cur_params):
+def validate_TextALFA(test_index, detector_keys, subm_dict, cur_params):
     text_alfa = TextALFA()
     evalParams = polygon_evaluation_params()
     joined_subm_dict = {}
     for img_key in test_index:
-        gtFile = decode_utf8(gt[img_key])
-        gtPols = []
-        gtConfs = []
-        gtDontCare = []
-        pointsList, _, _, transcriptionsList = get_tl_line_values_from_file_contents(gtFile, evalParams, True, False)
-        for i in range(len(pointsList)):
-            transcription = transcriptionsList[i]
-            dontCare = transcription == "###"
-            gtDontCare.append(dontCare)
-            points = pointsList[i]
-            gtPol = polygon_from_points(points)
-            gtPols.append(gtPol)
-            gtConfs.append(1.0)
         joined_img_polygons = {}
         joined_img_confs = {}
         for j in range(len(detector_keys)):
