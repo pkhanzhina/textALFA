@@ -13,31 +13,27 @@ import json
 #     'charnet_ic15_95',
 #     'nms_ic15_015',
 #     'text_alfa_ic15_015'
-#
-# ]# thresholds = {
-#     'psenet': 0.93,
-#     'craft': 0.85,
-#     'charnet': 0.95,
-# }
-
-
-# using_detections = [
-#     'psenet_ic15_015',
-#     'craft_ic15_015',
-#     'charnet_ic15_015'
 # ]
 
+
 using_detections = [
+    'psenet_ic15_015',
+    'craft_ic15_015',
+    'charnet_ic15_015',
     'psenet_ic15_93',
     'craft_ic15_85',
     'charnet_ic15_95',
 ]
 
 thresholds = {
-    'psenet': None,
-    'craft': None,
-    'charnet': None,
+    'psenet_ic15_015': None,
+    'craft_ic15_015': None,
+    'charnet_ic15_015': None,
+    'psenet_ic15_93': 0.93,
+    'craft_ic15_85': 0.85,
+    'charnet_ic15_95': 0.95,
 }
+
 
 allDetFilePaths = {
     'craft_ic15_85': './res_craft_ic15/res_craft_ic15_85_2.zip',
@@ -65,7 +61,7 @@ def precision_recall(gt, subm, threshold=None):
     if threshold is not None:
         op_p_idx = np.argmin(np.abs(confidences - threshold))
         operating_point = (float(precision[op_p_idx]), float(recall[op_p_idx]))
-    return precision, recall, operating_point
+    return precision, recall, confidences, operating_point
 
 
 def count_pr_for_detectors():
@@ -76,14 +72,14 @@ def count_pr_for_detectors():
     curves = {}
     for key in using_detections:
         validate_data(allDetFilePaths[key], evalParams, isGT=False)
-        new_key = key.split('_')[0]
-        subm_dict[new_key] = load_zip_file(allDetFilePaths[key], evalParams['DET_SAMPLE_NAME_2_ID'], True)
-        precision, recall, operating_point = precision_recall(gt, subm_dict[new_key], threshold=thresholds[new_key])
-        curves[new_key] = {'precision': list(precision.astype(np.float)),
+        subm_dict[key] = load_zip_file(allDetFilePaths[key], evalParams['DET_SAMPLE_NAME_2_ID'], True)
+        precision, recall, confidences, operating_point = precision_recall(gt, subm_dict[key], threshold=thresholds[key])
+        curves[key] = {'precision': list(precision.astype(np.float)),
                            'recall': list(recall.astype(np.float)),
+                           'thresholds': list(confidences),
                            'operating_point': operating_point}
         with open('./precision_recall/data/' + key + '.json', "w") as write_file:
-            json.dump({new_key: curves[new_key]}, write_file)
+            json.dump({key: curves[key]}, write_file)
     print()
     return curves
 

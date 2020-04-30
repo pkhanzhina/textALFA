@@ -12,54 +12,58 @@ from parameter_validation.validate_TextALFA import validate_TextALFA
 import json
 
 using_detections = [
-    'psenet_015',
-    'craft_015',
-    'charnet_015'
+    'psenet_ic15_015',
+    'craft_ic15_015',
+    'charnet_ic15_015'
 ]
 
 allDetFilePaths = {
-    # 'craft_015': './res_craft_ic15/res_craft_ic15_015.zip',
-    'craft_015': './res_craft_ic15/res_craft_ic15_015_weighted.zip',
-    'psenet_015': './res_psenet_ic15/res_psenet_ic15_015.zip',
-    'charnet_015': './res_charnet_ic15/res_charnet_ic15_015.zip'
-    # 'psenet_93': './res_psenet_ic15/res_psenet_ic15_93.zip',
-    # 'craft_85': './res_craft_ic15/res_craft_ic15_85_2.zip',
-    # 'charnet_95': './res_charnet_ic15/res_charnet_ic15_95.zip'
+    'craft_ic15_015': './res_craft_ic15/res_craft_ic15_015_weighted.zip',
+    'psenet_ic15_015': './res_psenet_ic15/res_psenet_ic15_015.zip',
+    'charnet_ic15_015': './res_charnet_ic15/res_charnet_ic15_015.zip',
+    'psenet_ic15_93': './res_psenet_ic15/res_psenet_ic15_93.zip',
+    'craft_ic15_85': './res_craft_ic15/res_craft_ic15_85_2.zip',
+    'charnet_ic15_95': './res_charnet_ic15/res_charnet_ic15_95.zip'
 }
+
 gtFilePath = './gt_ic15/gt_ic15.zip'
 bounding_box_fusion_method = ["AVERAGE", "INTERSECTION", "MOST_CONFIDENT", "WEIGHTED_AVERAGE", "UNION"]
 scores_fusion_method = ["AVERAGE", "MULTIPLY", "MOST_CONFIDENT"]
+use_precision_instead_of_scores = [True, False]
+
 
 folds_count = 1
 
 all_results = [{} for i in range(10)]
 
 
+# random.seed(1e6-1)
+
+
 def generate_params():
-    # params = {'tau': [], 'bounding_box_fusion_method': [], 'scores_fusion_method': [], 'empty_epsilon': []}
     params = {}
-    # random.seed(1e6-1)
     params['tau'] = round(random.uniform(0.01, 1), 2)
     params['empty_epsilon'] = round(random.uniform(0.01, 1), 2)
     params['bounding_box_fusion_method'] = bounding_box_fusion_method[random.randint(0, 4)]
     params['scores_fusion_method'] = scores_fusion_method[random.randint(0, 2)]
+    # params['nms_threshold'] !!! futher improvement
     params['threshold'] = round(random.uniform(0.015**3, 0.75), 2)
-    # params['threshold'] = 0
+    params['use_precision_instead_of_scores'] = random.choice(use_precision_instead_of_scores)
     return params
 
 
-def cross_validate_TextALFA(img_keys, gt, detector_keys, subm_dict, folds_count=folds_count):
+def cross_validate_TextALFA(img_keys, detector_keys, subm_dict, folds_count=folds_count):
     img_keys = np.array(img_keys)
 
-    # random.seed(1e6-1)
     random_indices = random.sample(range(len(img_keys)), len(img_keys))
     img_keys = img_keys[random_indices]
 
-    fold_index = 0
     best_params_per_fold = {i: {'tau': 0.00,
                                 'bounding_box_fusion_method': "",
                                 'scores_fusion_method': "",
-                                'empty_epsilon': 0.00} for i in range(folds_count)}
+                                'empty_epsilon': 0.00,
+                                'threshold': 0.00,
+                                'use_precision_instead_of_scores': None} for i in range(folds_count)}
     best_result_per_fold = {i: {'precision': 0.00,
                                 'recall': 0.00,
                                 'hmean': 0.00,
@@ -74,7 +78,6 @@ def cross_validate_TextALFA(img_keys, gt, detector_keys, subm_dict, folds_count=
             img_keys_fold = img_keys
             result_name = 'res_cross_validation_' + str(fold_index)
             joined_subm_dict = validate_TextALFA(img_keys_fold, detector_keys, subm_dict, cur_params)
-            gt_name = 'gt_ic15_' + str(fold_index)
             zip_filename = os.path.join('./parameter_validation/data_all', result_name + '.zip')
 
             with ZipFile(zip_filename, 'w') as zipped_f:
@@ -93,8 +96,7 @@ def cross_validate_TextALFA(img_keys, gt, detector_keys, subm_dict, folds_count=
                 'g': gtFilePath,
                 's': zip_filename
             }
-            resDict = rrc_evaluation_funcs.main_evaluation(p, evalParams, validate_data, evaluate_method, show_result=False)
-            resDict = resDict['method']
+            resDict, _, _, _ = rrc_evaluation_funcs.main_evaluation(p, evalParams, validate_data, evaluate_method, show_result=False)
             all_results[fold_index][str(cur_params)] = resDict
             if resDict['AP'] > best_result_per_fold[fold_index]['AP']:
                 best_result_per_fold[fold_index] = resDict
@@ -153,15 +155,13 @@ if __name__ == '__main__':
         validate_data(allDetFilePaths[key], evalParams, isGT=False)
     subm_dict = {}
     for key in using_detections:
-        new_key = key.split('_')[0]
-        subm_dict[new_key] = load_zip_file(allDetFilePaths[key], evalParams['DET_SAMPLE_NAME_2_ID'], True)
+        subm_dict[key] = load_zip_file(allDetFilePaths[key], evalParams['DET_SAMPLE_NAME_2_ID'], True)
     validate_data(gtFilePath, evalParams, isGT=True)
-    gt = load_zip_file(gtFilePath, evalParams['GT_SAMPLE_NAME_2_ID'])
     detector_keys = list(subm_dict.keys())
     if len(detector_keys) == 0:
         exit()
     img_keys = list(sorted(subm_dict[detector_keys[0]].keys(), key=lambda x: int(x)))
-    best_results, best_params = cross_validate_TextALFA(img_keys, gt, detector_keys, subm_dict)
+    best_results, best_params = cross_validate_TextALFA(img_keys, detector_keys, subm_dict)
     print()
     print()
     for i in range(0, folds_count):

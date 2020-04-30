@@ -60,11 +60,12 @@ def validate_data(filePath, evaluationParams, isGT):
                                                         withConfidence=evaluationParams['CONFIDENCES'])
 
 
-def compute_ap(confList, matchList, numGtCare):
+def compute_ap(confList, matchList, numGtCare, careMask=None):
     correct = 0
     AP = 0
     prec = []
     rec = []
+    confs = []
     if len(confList) > 0:
         confList = np.array(confList)
         matchList = np.array(matchList)
@@ -75,6 +76,12 @@ def compute_ap(confList, matchList, numGtCare):
         fps = np.cumsum(np.array(np.logical_not(matchList)).astype(np.float32))
         prec = tps / np.maximum((tps + fps), np.finfo(np.float64).eps)
         rec = tps / np.maximum(float(numGtCare), np.finfo(np.float64).eps)
+        confs = confList
+        if careMask is not None:
+            careMask = np.array(careMask)
+            careMask = careMask[sorted_ind]
+            confList = confList[careMask]
+            matchList = matchList[careMask]
         for n in range(len(confList)):
             match = matchList[n]
             if match:
@@ -84,7 +91,7 @@ def compute_ap(confList, matchList, numGtCare):
         if numGtCare > 0:
             AP /= numGtCare
 
-    return AP, prec, rec, confList
+    return AP, prec, rec, confs
 
     
 def evaluate_method(gt, subm, evaluationParams):
@@ -106,6 +113,9 @@ def evaluate_method(gt, subm, evaluationParams):
     
     arrGlobalConfidences = [];
     arrGlobalMatches = [];
+    arrGlobalCareMask = [];
+
+    total_count = 0
 
     for resFile in gt:
         
@@ -165,6 +175,7 @@ def evaluate_method(gt, subm, evaluationParams):
             detFile = rrc_evaluation_funcs.decode_utf8(subm[resFile]) 
             
             pointsList,anglesList,confidencesList,_ = rrc_evaluation_funcs.get_tl_line_values_from_file_contents(detFile,evaluationParams,False,evaluationParams['CONFIDENCES'])
+            total_count += len(pointsList)
             for n in range(len(pointsList)):
                 points = pointsList[n]
                 
@@ -223,15 +234,16 @@ def evaluate_method(gt, subm, evaluationParams):
 
             if evaluationParams['CONFIDENCES']:
                 for detNum in range(len(detPols)):
-                    if detNum not in detDontCarePolsNum :
-                        #we exclude the don't care detections
-                        match = detNum in detMatchedNums
+                    #we exclude the don't care detections
+                    arrGlobalCareMask.append(detNum not in detDontCarePolsNum)
 
-                        arrSampleConfidences.append(confidencesList[detNum])
-                        arrSampleMatch.append(match)
+                    match = detNum in detMatchedNums
 
-                        arrGlobalConfidences.append(confidencesList[detNum])
-                        arrGlobalMatches.append(match)
+                    arrSampleConfidences.append(confidencesList[detNum])
+                    arrSampleMatch.append(match)
+
+                    arrGlobalConfidences.append(confidencesList[detNum])
+                    arrGlobalMatches.append(match)
                             
         numGtCare = (len(gtPols) - len(gtDontCarePolsNum))
         numDetCare = (len(detPols) - len(detDontCarePolsNum))
@@ -243,7 +255,7 @@ def evaluate_method(gt, subm, evaluationParams):
             recall = float(detMatched) / numGtCare
             precision = 0 if numDetCare==0 else float(detMatched) / numDetCare
             if evaluationParams['CONFIDENCES'] and evaluationParams['PER_SAMPLE_RESULTS']:
-                sampleAP = compute_ap(arrSampleConfidences, arrSampleMatch, numGtCare )                    
+                sampleAP, _, _, _ = compute_ap(arrSampleConfidences, arrSampleMatch, numGtCare)
 
         hmean = 0 if (precision + recall)==0 else 2.0 * precision * recall / (precision + recall)                
 
@@ -273,7 +285,7 @@ def evaluate_method(gt, subm, evaluationParams):
     rec = []
     confs = []
     if evaluationParams['CONFIDENCES']:
-        AP, prec, rec, confs = compute_ap(arrGlobalConfidences, arrGlobalMatches, numGlobalCareGt)
+        AP, prec, rec, confs = compute_ap(arrGlobalConfidences, arrGlobalMatches, numGlobalCareGt, arrGlobalCareMask)
 
     methodRecall = 0 if numGlobalCareGt == 0 else float(matchedSum)/numGlobalCareGt
     methodPrecision = 0 if numGlobalCareDet == 0 else float(matchedSum)/numGlobalCareDet
@@ -301,14 +313,14 @@ if __name__=='__main__':
         # 's': './res_craft_ic15/res_craft_ic15_015_weighted_rect.zip',
         # 's': './res_craft_ic15/res_craft_ic15_015_weighted_rect2.zip',
         # 's': './res_psenet_ic15/res_psenet_ic15_93.zip'
-        # 's': './res_psenet_ic15/res_psenet_ic15_015.zip'
+        's': './res_psenet_ic15/res_psenet_ic15_015.zip'
         # 's': './res_psenet_ic15/res_psenet_ic15_015_rect.zip',
         # 's': './res_psenet_ic15/res_psenet_ic15_015_rect2.zip',
         # 's': './res_charnet_ic15/res_charnet_ic15_95.zip'
         # 's': './res_charnet_ic15/res_charnet_ic15_015.zip'
         # 's': './res_charnet_ic15/res_charnet_ic15_015_rect.zip',
         # 's': './res_charnet_ic15/res_charnet_ic15_015_rect2.zip',
-        's': './res_text_alfa_polygon_ic15/res_text_alfa_polygon_ic15_psenet_015_craft_015_weighted_charnet_015.zip'
+        # 's': './res_text_alfa_polygon_ic15/res_text_alfa_polygon_ic15_psenet_015_craft_015_weighted_charnet_015.zip'
         # 's': './res_text_alfa_bbox_ic15/res_text_alfa_bbox_ic15_psenet_015_craft_015_weighted_charnet_015_rect.zip'
         # 's': './res_text_alfa_bbox_ic15/res_text_alfa_bbox_ic15_psenet_015_craft_015_weighted_charnet_015_rect2.zip'
     }

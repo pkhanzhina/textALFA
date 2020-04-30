@@ -30,7 +30,8 @@ def validate_TextALFA(test_index, detector_keys, subm_dict, cur_params):
                                                                    scores_fusion_method=cur_params['scores_fusion_method'],
                                                                    add_empty_detections=True,
                                                                    empty_epsilon=cur_params['empty_epsilon'],
-                                                                   max_1_box_per_detector=True)
+                                                                   max_1_box_per_detector=True,
+                                                                   use_precision_instead_of_scores=cur_params['use_precision_instead_of_scores'])
         polygons, confs = [], []
         for i in range(len(new_img_polygon)):
             if new_img_confs[i] < cur_params['threshold']:

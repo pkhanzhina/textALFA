@@ -2,9 +2,11 @@
 import numpy as np
 from itertools import combinations
 import cv2 as cv
+import os
+import json
 
 from NMS.NMS_polygon import NMS_polygon
-import clustering_polygon as polygon_clustering
+import TextALFA_polygon.clustering_polygon as polygon_clustering
 from utils.polygon_operations import polygon_from_points, rectangle_to_polygon, order_points_new
 
 
@@ -137,10 +139,27 @@ class Object:
 class TextALFA:
     def __init__(self):
         self.bc = polygon_clustering.PolygonClustering()
+        using_detections = [
+            'psenet_015',
+            'craft_015',
+            'charnet_015',
+            'psenet_93',
+            'craft_85',
+            'charnet_95',
+        ]
+        pr_curves_folder = './precision_recall/data/'
+        self.curves = {}
+        for key in using_detections:
+            split = key.split('_')
+            data_file = os.path.join(pr_curves_folder, split[0] + '_ic15_' + split[1] + '.json')
+            with open(data_file, "r") as read_file:
+                data = json.load(read_file)
+            self.curves.update(data)
+
 
     def TextALFA_result(self, all_detectors_names, detectors_polygons, detectors_scores, tau, gamma,
                         bounding_box_fusion_method, scores_fusion_method, add_empty_detections, empty_epsilon,
-                        max_1_box_per_detector):
+                        max_1_box_per_detector, use_precision_instead_of_scores):
         """
         TextALFA algorithm
 
@@ -201,6 +220,10 @@ class TextALFA:
             True - only one detection form detector could be added to cluster
             False - multiple detections from same detector could be added to cluster
 
+        use_precision_instead_of_scores: boolean
+            True - replaces score with corresponding precision value of the detector
+            False - leaves score unchanged
+
         Returns
         -------
         bounding_boxes : list
@@ -209,6 +232,14 @@ class TextALFA:
         scores : list
             Scores result of TextALFA
         """
+
+        if use_precision_instead_of_scores:
+            for key in detectors_scores:
+                pr_data = self.curves[key]
+                precision = pr_data['precision']
+                thresholds = pr_data['thresholds']
+                for i in range(len(detectors_scores[key])):
+                    detectors_scores[key][i] = precision[thresholds.index(detectors_scores[key][i])]
 
         objects_detector_names, objects_polygons, objects_scores = \
             self.bc.get_raw_candidate_objects(detectors_polygons, detectors_scores, tau, gamma,
