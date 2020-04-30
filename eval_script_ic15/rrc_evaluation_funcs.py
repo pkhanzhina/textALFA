@@ -322,7 +322,7 @@ def main_evaluation(p, evalParams, validate_data_fn, evaluate_method_fn, show_re
     subm = load_zip_file(submFilePath, evalParams['DET_SAMPLE_NAME_2_ID'], True)
     # gt = p['g']
     # subm = p['s']
-    evalData = evaluate_method_fn(gt, subm, evalParams)
+    evalData, _, _, _ = evaluate_method_fn(gt, subm, evalParams)
     resDict.update(evalData)
 
     # except Exception as e:
@@ -379,7 +379,7 @@ def main_evaluation_notzip(p, evalParams, validate_data_fn, evaluate_method_fn, 
     resDict = {'calculated': True, 'Message': '', 'method': '{}', 'per_sample': '{}'}
     gt = p['g']
     subm = p['s']
-    evalData = evaluate_method_fn(gt, subm, evalParams)
+    evalData, prec, rec, confidences = evaluate_method_fn(gt, subm, evalParams)
     resDict.update(evalData)
 
     if 'o' in p:
@@ -417,4 +417,4 @@ def main_evaluation_notzip(p, evalParams, validate_data_fn, evaluate_method_fn, 
         sys.stdout.write("Calculated!")
         sys.stdout.write(json.dumps(resDict['method']))
 
-    return resDict['method']
+    return resDict['method'], prec, rec, confidences

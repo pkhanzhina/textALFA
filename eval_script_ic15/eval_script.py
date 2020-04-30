@@ -63,12 +63,18 @@ def validate_data(filePath, evaluationParams, isGT):
 def compute_ap(confList, matchList, numGtCare):
     correct = 0
     AP = 0
+    prec = []
+    rec = []
     if len(confList) > 0:
         confList = np.array(confList)
         matchList = np.array(matchList)
         sorted_ind = np.argsort(-confList)
         confList = confList[sorted_ind]
         matchList = matchList[sorted_ind]
+        tps = np.cumsum(np.array(matchList).astype(np.float32))
+        fps = np.cumsum(np.array(np.logical_not(matchList)).astype(np.float32))
+        prec = tps / np.maximum((tps + fps), np.finfo(np.float64).eps)
+        rec = tps / np.maximum(float(numGtCare), np.finfo(np.float64).eps)
         for n in range(len(confList)):
             match = matchList[n]
             if match:
@@ -78,7 +84,7 @@ def compute_ap(confList, matchList, numGtCare):
         if numGtCare > 0:
             AP /= numGtCare
 
-    return AP
+    return AP, prec, rec, confList
 
     
 def evaluate_method(gt, subm, evaluationParams):
@@ -263,28 +269,33 @@ def evaluate_method(gt, subm, evaluationParams):
                                     
     # Compute MAP and MAR
     AP = 0
+    prec = []
+    rec = []
+    confs = []
     if evaluationParams['CONFIDENCES']:
-        AP = compute_ap(arrGlobalConfidences, arrGlobalMatches, numGlobalCareGt)
+        AP, prec, rec, confs = compute_ap(arrGlobalConfidences, arrGlobalMatches, numGlobalCareGt)
 
     methodRecall = 0 if numGlobalCareGt == 0 else float(matchedSum)/numGlobalCareGt
     methodPrecision = 0 if numGlobalCareDet == 0 else float(matchedSum)/numGlobalCareDet
-    methodHmean = 0 if methodRecall + methodPrecision==0 else 2* methodRecall * methodPrecision / (methodRecall + methodPrecision)
+    methodHmean = 0 if methodRecall + methodPrecision==0 else 2 * methodRecall * methodPrecision / (methodRecall + methodPrecision)
     
     methodMetrics = {'precision':methodPrecision, 'recall':methodRecall,'hmean': methodHmean, 'AP': AP  }
 
     resDict = {'calculated':True,'Message':'','method': methodMetrics,'per_sample': perSampleMetrics}
     
     
-    return resDict
+    return resDict, prec, rec, confs
 
 
 
 if __name__=='__main__':
+    pr_curves_folder = './pr_curves/'
     p = {
         'g': './gt_ic15/gt_ic15.zip',
         # 'g': './gt_ic15/gt_ic15_rect.zip',
         # 'g': './gt_ic15/gt_ic15_rect2.zip',
-        's': './res_nms_ic15/res_nms_ic15_psenet_015_craft_015_weighted_charnet_015.zip'
+        # 's': './res_nms_ic15/res_nms_ic15_psenet_015_craft_015_weighted_charnet_015.zip'
+        # 's': './res_nms_ic15/res_nms_ic15_psenet_93_craft_85_charnet_95.zip'
         # 's': './res_craft_ic15/res_craft_ic15_85_2.zip'
         # 's': './res_craft_ic15/res_craft_ic15_015_weighted.zip'
         # 's': './res_craft_ic15/res_craft_ic15_015_weighted_rect.zip',
@@ -297,10 +308,11 @@ if __name__=='__main__':
         # 's': './res_charnet_ic15/res_charnet_ic15_015.zip'
         # 's': './res_charnet_ic15/res_charnet_ic15_015_rect.zip',
         # 's': './res_charnet_ic15/res_charnet_ic15_015_rect2.zip',
-        # 's': './res_text_alfa_polygon_ic15/res_text_alfa_polygon_ic15_psenet_015_craft_015_weighted_charnet_015.zip'
+        's': './res_text_alfa_polygon_ic15/res_text_alfa_polygon_ic15_psenet_015_craft_015_weighted_charnet_015.zip'
         # 's': './res_text_alfa_bbox_ic15/res_text_alfa_bbox_ic15_psenet_015_craft_015_weighted_charnet_015_rect.zip'
         # 's': './res_text_alfa_bbox_ic15/res_text_alfa_bbox_ic15_psenet_015_craft_015_weighted_charnet_015_rect2.zip'
     }
     evalParams = polygon_evaluation_params()
     # evalParams = box_with_angle_evaluation_params()
-    rrc_evaluation_funcs.main_evaluation(p, evalParams, validate_data, evaluate_method)
+    result, _, _, _ = rrc_evaluation_funcs.main_evaluation(p, evalParams, validate_data, evaluate_method)
+
